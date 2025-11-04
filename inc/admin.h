@@ -22,7 +22,6 @@ typedef struct user_tag {
 } UserTag;
 
 /* 管理员相关函数 */
-int admin_login(); // 登录
 int load_admin_accounts(AdminAccount admins[], int *count);// 从文件加载管理员账号
 int save_admin_accounts(AdminAccount admins[], int count);// 保存管理员账号到文件
 int admin_login(AdminAccount admins[], int count, int *login_idx);// 管理员登录

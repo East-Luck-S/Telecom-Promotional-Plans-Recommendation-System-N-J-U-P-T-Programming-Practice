@@ -8,7 +8,7 @@ Package* packageList = NULL;
 int totalPackages = 0;
 User* userList = NULL;
 int totalUsers = 0;
-User currentUser;
+User* currentUser;
 
 // 清空输入缓冲区
 void clearInputBuffer() {
@@ -374,53 +374,6 @@ static void swapPackages(Package* a, Package* b) {
     *b = temp;
 }
 
-// 3. 匹配套餐
-void matchPackagesByDemand() {
-    // 前置条件检查
-    if (currentUser == NULL || strlen(currentUser->userName) == 0) {
-        printf("[错误] 请先登录系统！\n");
-        return;
-    }
-    if (!userDemand.valid) {
-        printf("[错误] 请先填写需求调查！\n");
-        return;
-    }
-    if (totalPackages <= 0 || !allPackages) {
-        printf("[错误] 系统无套餐数据，请联系管理员！\n");
-        return;
-    }
-
-    // 重置匹配结果
-    matchedPkgCount = 0;
-    memset(matchedPackages, 0, sizeof(matchedPackages));
-
-    // 筛选有效套餐并计算得分
-    for (int i = 0; i < totalPackages; i++) {
-        const Package* pkg = &allPackages[i];
-        if (!pkg->is_active || pkg->is_deleted) continue;  // 跳过无效套餐
-
-        float score = calcMatchScore(pkg, &userDemand, currentUser->userStar);
-        if (score <= 0) continue;  // 过滤不匹配套餐
-
-        // 保存匹配结果（最多20个）
-        if (matchedPkgCount < 20) {
-            matchedPackages[matchedPkgCount] = *pkg;
-            matchedPackages[matchedPkgCount].match_score = score;
-            matchedPkgCount++;
-        }
-    }
-
-    // 按匹配度降序排序
-    for (int i = 0; i < matchedPkgCount - 1; i++) {
-        for (int j = 0; j < matchedPkgCount - i - 1; j++) {
-            if (matchedPackages[j].match_score < matchedPackages[j+1].match_score) {
-                swapPackages(&matchedPackages[j], &matchedPackages[j+1]);
-            }
-        }
-    }
-
-    printf("\n[匹配完成] 共找到 %d 个符合需求的套餐\n", matchedPkgCount);
-}
 
 // 4. 显示推荐套餐
 void showMatchedPackages() {
@@ -448,15 +401,14 @@ void showMatchedPackages() {
         printf("\n===== 推荐套餐（%d星用户）- 第%d/%d页 =====\n", 
                currentUser->userStar, currentPage, totalPages);
         printf("+----+----------------+----------+----------+----------+----------+------------+\n");
-        printf("| ID | 套餐名称       | 月费(元) | 流量(MB) | 通话(分钟)| 短信(条) | 匹配度(%%)  |\n");
+        printf("| ID | 套餐名称       | 月费(元) | 流量(MB) | 通话(分钟)| 短信(条) |\n");
         printf("+----+----------------+----------+----------+----------+----------+------------+\n");
         
         for (int i = start; i < end; i++) {
             const Package* pkg = &matchedPackages[i];
             printf("| %2d | %-14s | %8.2f | %8d | %8d | %8d | %8.1f |\n",
                    pkg->id, pkg->name, pkg->monthly_fee,
-                   pkg->data_mb, pkg->voice_minutes, pkg->sms,
-                   pkg->match_score * 100);
+                   pkg->data_mb, pkg->voice_minutes, pkg->sms);
         }
         
         printf("+----+----------------+----------+----------+----------+----------+------------+\n");
@@ -476,14 +428,14 @@ void showMatchedPackages() {
 // 查询个人套餐
 void queryUserPackage() {
     printf("\n===== 个人套餐信息 =====\n");
-    printf("用户编号：%s\n", currentUser.userId);
-    printf("用户名：%s\n", currentUser.userName);
-    printf("已选套餐编号：%s\n", currentUser.selectedPkg);
+    printf("用户编号：%s\n", currentUser->userId);
+    printf("用户名：%s\n", currentUser->userName);
+    printf("已选套餐编号：%s\n", currentUser->selectedPkg);
 
     // 查找套餐详情
     int found = 0;
     for (int i = 0; i < totalPackages; i++) {
-        if (packageList[i].id == atoi(currentUser.selectedPkg)) { // 假设套餐编号为数字ID
+        if (packageList[i].id == atoi(currentUser->selectedPkg)) { // 假设套餐编号为数字ID
             printf("套餐详情：\n");
             printf("  套餐名称：%s\n", packageList[i].name);
             printf("  月资费：%.2f元\n", packageList[i].monthly_fee);
@@ -506,10 +458,10 @@ void applyPackageChange() {
     char pkgId[20];
     scanf("%s", pkgId);
     clearInputBuffer();
-    strncpy(currentUser.selectedPkg, pkgId, 19);
+    strncpy(currentUser->selectedPkg, pkgId, 19);
 
     // 更新用户列表并保存
-    User* user = findUser(currentUser.userId);
+    User* user = findUser(currentUser->userId);
     if (user) {
         strncpy(user->selectedPkg, pkgId, 19);
     }

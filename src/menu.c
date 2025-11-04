@@ -4,10 +4,7 @@
 #include "user.c"
 #include "admin.c"
 
-void clearInputBuffer() {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}//清空输入缓存区函数
+//清空输入缓存区函数
 /*主菜单 实现功能：主菜单信息，执行操作通过调用别的函数内的接口*/
 void mainMenu() {
     while (1) {

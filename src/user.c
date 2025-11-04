@@ -1,4 +1,5 @@
 #include "user.h"
+#include "system.h"
 
 // 全局变量定义
 Package* packageList = NULL;

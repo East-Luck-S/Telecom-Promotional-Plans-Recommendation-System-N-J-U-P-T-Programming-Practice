@@ -6,8 +6,6 @@ int totalPackages = 0;
 User* userList = NULL;
 int totalUsers = 0;
 User currentUser;
-Package matchedPackages[10];
-int matchedCount = 0;
 
 // 清空输入缓冲区
 void clearInputBuffer() {
@@ -39,7 +37,7 @@ void trimStr(char* str) {
     str[end - start + 1] = '\0';
 }
 
-// 从文本文件加载套餐（格式：id,月费,通话,流量,宽带,意向数）
+// 从文本文件加载套餐（格式：id,name,monthly_fee,data_mb,voice_minutes,sms,contract_months,start_date,end_date,is_active,description）
 int loadPackagesFromText() {
     // 释放旧数据
     if (packageList) {
@@ -48,10 +46,10 @@ int loadPackagesFromText() {
     }
     totalPackages = 0;
 
-    FILE* fp = fopen(PACKAGE_FILE, "r");
+    FILE* fp = fopen(PKG_FILE, "r");
     if (!fp) {
         // 首次运行创建空文件
-        fp = fopen(PACKAGE_FILE, "w");
+        fp = fopen(PKG_FILE, "w");
         fclose(fp);
         return 1;
     }
@@ -80,40 +78,37 @@ int loadPackagesFromText() {
 
             // 拆分字段（逗号分隔）
             char* token = strtok(line, ",");
-            if (token) {
-                trimStr(token);
-                strncpy(packageList[i].packageId, token, 19);
-            }
+            if (token) packageList[i].id = atoi(token);
 
             token = strtok(NULL, ",");
-            if (token) {
-                trimStr(token);
-                packageList[i].monthlyFee = atof(token);
-            }
+            if (token) strncpy(packageList[i].name, token, 63);
 
             token = strtok(NULL, ",");
-            if (token) {
-                trimStr(token);
-                packageList[i].callDuration = atoi(token);
-            }
+            if (token) packageList[i].monthly_fee = atof(token);
 
             token = strtok(NULL, ",");
-            if (token) {
-                trimStr(token);
-                packageList[i].flow4G = atoi(token);
-            }
+            if (token) packageList[i].data_mb = atoi(token);
 
             token = strtok(NULL, ",");
-            if (token) {
-                trimStr(token);
-                packageList[i].broadband = atoi(token);
-            }
+            if (token) packageList[i].voice_minutes = atoi(token);
 
             token = strtok(NULL, ",");
-            if (token) {
-                trimStr(token);
-                packageList[i].intentCount = atoi(token);
-            }
+            if (token) packageList[i].sms = atoi(token);
+
+            token = strtok(NULL, ",");
+            if (token) packageList[i].contract_months = atoi(token);
+
+            token = strtok(NULL, ",");
+            if (token) strncpy(packageList[i].start_date, token, 10);
+
+            token = strtok(NULL, ",");
+            if (token) strncpy(packageList[i].end_date, token, 10);
+
+            token = strtok(NULL, ",");
+            if (token) packageList[i].is_active = atoi(token);
+
+            token = strtok(NULL, ",");
+            if (token) strncpy(packageList[i].description, token, 255);
 
             i++;
         }
@@ -125,25 +120,29 @@ int loadPackagesFromText() {
 
 // 保存套餐到文本文件
 int savePackagesToText() {
-    FILE* fp = fopen(PACKAGE_FILE, "w");
+    FILE* fp = fopen(PKG_FILE, "w");
     if (!fp) return 0;
 
     for (int i = 0; i < totalPackages; i++) {
-        // 格式：id,月费,通话,流量,宽带,意向数（换行分隔）
-        fprintf(fp, "%s,%.2f,%d,%d,%d,%d\n",
-                packageList[i].packageId,
-                packageList[i].monthlyFee,
-                packageList[i].callDuration,
-                packageList[i].flow4G,
-                packageList[i].broadband,
-                packageList[i].intentCount);
+        fprintf(fp, "%d,%s,%.2f,%d,%d,%d,%d,%s,%s,%d,%s\n",
+                packageList[i].id,
+                packageList[i].name,
+                packageList[i].monthly_fee,
+                packageList[i].data_mb,
+                packageList[i].voice_minutes,
+                packageList[i].sms,
+                packageList[i].contract_months,
+                packageList[i].start_date,
+                packageList[i].end_date,
+                packageList[i].is_active,
+                packageList[i].description);
     }
 
     fclose(fp);
     return 1;
 }
 
-// 从文本文件加载用户（格式：id,姓名,套餐id,通话需求,流量需求,宽带需求,消费）
+// 从文本文件加载用户（格式：userId,userPwd,userName,selectedPkg,useYears,totalCost,userStar）
 int loadUsersFromText() {
     // 释放旧数据
     if (userList) {
@@ -184,46 +183,25 @@ int loadUsersFromText() {
 
             // 拆分字段（逗号分隔）
             char* token = strtok(line, ",");
-            if (token) {
-                trimStr(token);
-                strncpy(userList[i].userId, token, 19);
-            }
+            if (token) strncpy(userList[i].userId, token, 19);
 
             token = strtok(NULL, ",");
-            if (token) {
-                trimStr(token);
-                strncpy(userList[i].userName, token, 49);
-            }
+            if (token) strncpy(userList[i].userPwd, token, 19);
 
             token = strtok(NULL, ",");
-            if (token) {
-                trimStr(token);
-                strncpy(userList[i].currentPackageId, token, 19);
-            }
+            if (token) strncpy(userList[i].userName, token, 19);
 
             token = strtok(NULL, ",");
-            if (token) {
-                trimStr(token);
-                userList[i].callDemand = atoi(token);
-            }
+            if (token) strncpy(userList[i].selectedPkg, token, 19);
 
             token = strtok(NULL, ",");
-            if (token) {
-                trimStr(token);
-                userList[i].flowDemand = atoi(token);
-            }
+            if (token) userList[i].useYears = atoi(token);
 
             token = strtok(NULL, ",");
-            if (token) {
-                trimStr(token);
-                userList[i].broadbandDemand = atoi(token);
-            }
+            if (token) userList[i].totalCost = atof(token);
 
             token = strtok(NULL, ",");
-            if (token) {
-                trimStr(token);
-                userList[i].consumption = atof(token);
-            }
+            if (token) userList[i].userStar = atoi(token);
 
             i++;
         }
@@ -239,15 +217,14 @@ int saveUsersToText() {
     if (!fp) return 0;
 
     for (int i = 0; i < totalUsers; i++) {
-        // 格式：id,姓名,套餐id,通话需求,流量需求,宽带需求,消费（换行分隔）
-        fprintf(fp, "%s,%s,%s,%d,%d,%d,%.2f\n",
+        fprintf(fp, "%s,%s,%s,%s,%d,%.2f,%d\n",
                 userList[i].userId,
+                userList[i].userPwd,
                 userList[i].userName,
-                userList[i].currentPackageId,
-                userList[i].callDemand,
-                userList[i].flowDemand,
-                userList[i].broadbandDemand,
-                userList[i].consumption);
+                userList[i].selectedPkg,
+                userList[i].useYears,
+                userList[i].totalCost,
+                userList[i].userStar);
     }
 
     fclose(fp);
@@ -264,210 +241,57 @@ User* findUser(const char* userId) {
     return NULL;
 }
 
-// 填写需求调查
-void inputDemandByForm() {
-    printf("\n===== 需求调查 =====\n");
-    
-    printf("请输入每月通话需求（分钟）：");
-    while (1) {
-        if (scanf("%d", &currentUser.callDemand) == 1 && currentUser.callDemand > 0) {
-            break;
-        }
-        printf("输入错误，请重新输入正整数：");
-        clearInputBuffer();
-    }
-    clearInputBuffer();
-
-    printf("请输入每月4G流量需求（MB）：");
-    while (1) {
-        if (scanf("%d", &currentUser.flowDemand) == 1 && currentUser.flowDemand > 0) {
-            break;
-        }
-        printf("输入错误，请重新输入正整数：");
-        clearInputBuffer();
-    }
-    clearInputBuffer();
-
-    printf("是否需要宽带（1=需要，0=不需要）：");
-    int hasBroadband;
-    while (1) {
-        if (scanf("%d", &hasBroadband) == 1 && (hasBroadband == 0 || hasBroadband == 1)) {
-            break;
-        }
-        printf("输入错误，请输入0或1：");
-        clearInputBuffer();
-    }
-    clearInputBuffer();
-
-    currentUser.broadbandDemand = 0;
-    if (hasBroadband == 1) {
-        printf("请输入期望宽带带宽（M）：");
-        while (1) {
-            if (scanf("%d", &currentUser.broadbandDemand) == 1 && currentUser.broadbandDemand > 0) {
-                break;
-            }
-            printf("输入错误，请重新输入正整数：");
-            clearInputBuffer();
-        }
-        clearInputBuffer();
-    }
-
-    // 更新当前用户在列表中的数据
-    User* user = findUser(currentUser.userId);
-    if (user) {
-        user->callDemand = currentUser.callDemand;
-        user->flowDemand = currentUser.flowDemand;
-        user->broadbandDemand = currentUser.broadbandDemand;
-    }
-
-    // 保存到文件
-    if (saveUsersToText()) {
-        printf("需求提交成功！\n");
-    } else {
-        printf("需求保存失败！\n");
-    }
+// 录入用户需求（示例，可根据业务逻辑扩展）
+void inputUserDemand() {
+    printf("\n===== 录入用户需求（示例） =====\n");
+    // 可根据新版结构体扩展需求录入逻辑（如使用年限、消费金额等）
+    printf("功能待扩展...\n");
 }
 
-// 计算用户星级
+// 计算用户星级（基于累计消费金额，规则可自定义）
 void calcUserStar() {
     int star = 1;
-    if (currentUser.consumption >= 80) star = 5;
-    else if (currentUser.consumption >= 60) star = 4;
-    else if (currentUser.consumption >= 40) star = 3;
-    else if (currentUser.consumption >= 20) star = 2;
+    if (currentUser.totalCost >= 800) star = 5;
+    else if (currentUser.totalCost >= 600) star = 4;
+    else if (currentUser.totalCost >= 400) star = 3;
+    else if (currentUser.totalCost >= 200) star = 2;
 
     printf("\n===== 用户星级 =====\n");
     printf("用户：%s（%s）\n", currentUser.userName, currentUser.userId);
-    printf("近3个月月均消费：%.2f元\n", currentUser.consumption);
+    printf("累计消费金额：%.2f元\n", currentUser.totalCost);
     printf("星级评定：%d星\n", star);
 }
 
-// 匹配套餐
+// 匹配套餐（示例框架，需根据新版套餐字段完善逻辑）
 void matchPackagesByDemand() {
-    matchedCount = 0;
-    if (totalPackages == 0) {
-        printf("系统中暂无套餐数据！\n");
-        return;
-    }
-
-    // 优先匹配完全满足需求的套餐
-    for (int i = 0; i < totalPackages; i++) {
-        // 宽带需求匹配
-        int broadbandMatch = 0;
-        if (currentUser.broadbandDemand == 0) {
-            broadbandMatch = (packageList[i].broadband == 0) ? 1 : 0;
-        } else {
-            broadbandMatch = (packageList[i].broadband >= currentUser.broadbandDemand) ? 1 : 0;
-        }
-
-        // 通话和流量需求匹配
-        int callMatch = (packageList[i].callDuration >= currentUser.callDemand) ? 1 : 0;
-        int flowMatch = (packageList[i].flow4G >= currentUser.flowDemand) ? 1 : 0;
-
-        if (broadbandMatch && callMatch && flowMatch) {
-            matchedPackages[matchedCount++] = packageList[i];
-            if (matchedCount >= 10) break;
-        }
-    }
-
-    // 无完全匹配时，匹配接近需求的套餐（放宽至80%）
-    if (matchedCount == 0) {
-        for (int i = 0; i < totalPackages; i++) {
-            int broadbandMatch = (currentUser.broadbandDemand == 0) ? 
-                (packageList[i].broadband == 0) : (packageList[i].broadband >= currentUser.broadbandDemand);
-            int callNear = (packageList[i].callDuration >= currentUser.callDemand * 0.8) ? 1 : 0;
-            int flowNear = (packageList[i].flow4G >= currentUser.flowDemand * 0.8) ? 1 : 0;
-
-            if (broadbandMatch && callNear && flowNear) {
-                matchedPackages[matchedCount++] = packageList[i];
-                if (matchedCount >= 10) break;
-            }
-        }
-    }
+    printf("\n===== 匹配套餐（示例） =====\n");
+    // 需基于Package的data_mb、voice_minutes等字段与用户需求匹配，此处为框架
+    printf("功能待扩展...\n");
 }
 
-// 显示推荐套餐
+// 显示推荐套餐（示例框架）
 void showMatchedPackages() {
-    if (matchedCount == 0) {
-        printf("\n无匹配的套餐，请调整需求！\n");
-        return;
-    }
-
-    printf("\n===== 推荐套餐（共%d个）=====\n", matchedCount);
-    printf("序号 | 套餐编号 | 月资费 | 通话时长 | 流量(MB) | 宽带(M)\n");
-    printf("----------------------------------------------------\n");
-    for (int i = 0; i < matchedCount; i++) {
-        printf("%d    | %s | %.2f元  | %d分钟   | %d      | %d\n",
-               i+1,
-               matchedPackages[i].packageId,
-               matchedPackages[i].monthlyFee,
-               matchedPackages[i].callDuration,
-               matchedPackages[i].flow4G,
-               matchedPackages[i].broadband);
-    }
-
-    // 办理确认
-    char confirm;
-    printf("\n是否办理推荐套餐（y/n）：");
-    scanf("%c", &confirm);
-    clearInputBuffer();
-
-    if (confirm != 'y' && confirm != 'Y') {
-        printf("已取消办理！\n");
-        return;
-    }
-
-    // 选择套餐
-    int choice;
-    printf("请选择套餐序号（1-%d）：", matchedCount);
-    while (1) {
-        if (scanf("%d", &choice) == 1 && choice >= 1 && choice <= matchedCount) {
-            break;
-        }
-        printf("输入错误，请重新选择：");
-        clearInputBuffer();
-    }
-    clearInputBuffer();
-
-    // 更新用户套餐
-    strcpy(currentUser.currentPackageId, matchedPackages[choice-1].packageId);
-    User* user = findUser(currentUser.userId);
-    if (user) {
-        strcpy(user->currentPackageId, currentUser.currentPackageId);
-    }
-
-    // 更新套餐意向数
-    for (int i = 0; i < totalPackages; i++) {
-        if (strcmp(packageList[i].packageId, matchedPackages[choice-1].packageId) == 0) {
-            packageList[i].intentCount++;
-            break;
-        }
-    }
-
-    // 保存变更
-    if (saveUsersToText() && savePackagesToText()) {
-        printf("套餐办理成功！当前套餐：%s\n", currentUser.currentPackageId);
-    } else {
-        printf("办理失败，数据保存出错！\n");
-    }
+    printf("\n===== 推荐套餐列表（示例） =====\n");
+    // 需遍历匹配结果并显示，此处为框架
+    printf("功能待扩展...\n");
 }
 
 // 查询个人套餐
 void queryUserPackage() {
     printf("\n===== 个人套餐信息 =====\n");
     printf("用户编号：%s\n", currentUser.userId);
-    printf("用户姓名：%s\n", currentUser.userName);
-    printf("当前套餐：%s\n", currentUser.currentPackageId);
+    printf("用户名：%s\n", currentUser.userName);
+    printf("已选套餐编号：%s\n", currentUser.selectedPkg);
 
     // 查找套餐详情
     int found = 0;
     for (int i = 0; i < totalPackages; i++) {
-        if (strcmp(packageList[i].packageId, currentUser.currentPackageId) == 0) {
+        if (packageList[i].id == atoi(currentUser.selectedPkg)) { // 假设套餐编号为数字ID
             printf("套餐详情：\n");
-            printf("  月资费：%.2f元\n", packageList[i].monthlyFee);
-            printf("  通话时长：%d分钟\n", packageList[i].callDuration);
-            printf("  4G流量：%d MB\n", packageList[i].flow4G);
-            printf("  宽带：%d M\n", packageList[i].broadband);
+            printf("  套餐名称：%s\n", packageList[i].name);
+            printf("  月资费：%.2f元\n", packageList[i].monthly_fee);
+            printf("  包含流量：%d MB\n", packageList[i].data_mb);
+            printf("  包含语音：%d 分钟\n", packageList[i].voice_minutes);
             found = 1;
             break;
         }
@@ -478,13 +302,25 @@ void queryUserPackage() {
     }
 }
 
-// 变更套餐
+// 申请变更套餐
 void applyPackageChange() {
-    printf("\n===== 变更套餐 =====\n");
-    printf("请重新填写需求以获取新推荐\n");
-    inputDemandByForm();
-    matchPackagesByDemand();
-    showMatchedPackages();
+    printf("\n===== 套餐变更申请 =====\n");
+    printf("请输入新套餐编号：");
+    char pkgId[20];
+    scanf("%s", pkgId);
+    clearInputBuffer();
+    strncpy(currentUser.selectedPkg, pkgId, 19);
+
+    // 更新用户列表并保存
+    User* user = findUser(currentUser.userId);
+    if (user) {
+        strncpy(user->selectedPkg, pkgId, 19);
+    }
+    if (saveUsersToText()) {
+        printf("套餐变更成功！\n");
+    } else {
+        printf("套餐变更失败！\n");
+    }
 }
 
 // 用户功能菜单
@@ -498,18 +334,31 @@ void userFunctionMenu() {
     // 用户登录
     printf("\n===== 用户登录 =====\n");
     char userId[20];
+    char userPwd[20];
     printf("请输入用户编号：");
     fgets(userId, sizeof(userId), stdin);
     userId[strcspn(userId, "\n")] = '\0';
     trimStr(userId);
 
-    User* loginUser = findUser(userId);
+    printf("请输入用户密码：");
+    fgets(userPwd, sizeof(userPwd), stdin);
+    userPwd[strcspn(userPwd, "\n")] = '\0';
+    trimStr(userPwd);
+
+    User* loginUser = NULL;
+    for (int i = 0; i < totalUsers; i++) {
+        if (strcmp(userList[i].userId, userId) == 0 && strcmp(userList[i].userPwd, userPwd) == 0) {
+            loginUser = &userList[i];
+            break;
+        }
+    }
+
     if (loginUser) {
         currentUser = *loginUser;
         printf("登录成功，欢迎 %s！\n", currentUser.userName);
     } else {
         // 新用户注册
-        printf("用户不存在，是否注册新用户（y/n）：");
+        printf("用户不存在或密码错误，是否注册新用户（y/n）：");
         char reg;
         scanf("%c", &reg);
         clearInputBuffer();
@@ -520,17 +369,15 @@ void userFunctionMenu() {
 
         // 初始化新用户
         strncpy(currentUser.userId, userId, 19);
+        strncpy(currentUser.userPwd, userPwd, 19);
         printf("请输入用户名：");
         fgets(currentUser.userName, sizeof(currentUser.userName), stdin);
         currentUser.userName[strcspn(currentUser.userName, "\n")] = '\0';
         trimStr(currentUser.userName);
-        strcpy(currentUser.currentPackageId, "未办理");
-        currentUser.callDemand = 0;
-        currentUser.flowDemand = 0;
-        currentUser.broadbandDemand = 0;
-        printf("请输入近3个月月均消费（元）：");
-        scanf("%f", &currentUser.consumption);
-        clearInputBuffer();
+        strcpy(currentUser.selectedPkg, "未选择");
+        currentUser.useYears = 0;
+        currentUser.totalCost = 0.0;
+        currentUser.userStar = 1;
 
         // 添加到用户列表
         totalUsers++;
@@ -554,9 +401,9 @@ void userFunctionMenu() {
     // 菜单循环
     while (1) {
         printf("\n===== 用户功能菜单 =====\n");
-        printf("1. 填写需求调查\n");
+        printf("1. 录入用户需求（示例）\n");
         printf("2. 查看用户星级\n");
-        printf("3. 查看推荐套餐\n");
+        printf("3. 查看推荐套餐（示例）\n");
         printf("4. 查询个人套餐\n");
         printf("5. 变更套餐\n");
         printf("6. 返回主菜单\n");
@@ -572,7 +419,7 @@ void userFunctionMenu() {
 
         switch (choice) {
             case 1:
-                inputDemandByForm();
+                inputUserDemand();
                 break;
             case 2:
                 calcUserStar();

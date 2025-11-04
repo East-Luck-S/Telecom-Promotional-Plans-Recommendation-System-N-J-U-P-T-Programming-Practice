@@ -7,6 +7,10 @@
 
 #define KEYWORD_LEN 10
 
+// 用户历史消费数据文件路径
+#define USER_HISTORY_FILE "user_history.txt"
+#define USER_TAG_FILE "user_tags.txt"
+
 // 用户需求与行为分区
 typedef struct user_history {
 	int user_id;
@@ -21,8 +25,10 @@ typedef struct user_tag {
 	char tags[128]; // 逗号分隔的标签，如“重度流量,低通话,学生”
 } UserTag;
 
+
 /* 管理员相关函数 */
 int load_admin_accounts(AdminAccount admins[], int *count);// 从文件加载管理员账号
+void read_password(char *buf, int buflen); // 从控制台读取密码并用 '*' 代替显示
 int save_admin_accounts(AdminAccount admins[], int count);// 保存管理员账号到文件
 int admin_login(AdminAccount admins[], int count, int *login_idx);// 管理员登录
 void manage_admins(AdminAccount admins[], int *count); // 仅全局管理员可用

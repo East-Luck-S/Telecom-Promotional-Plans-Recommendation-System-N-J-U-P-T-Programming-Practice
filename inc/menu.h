@@ -1,6 +1,13 @@
 #ifndef MENU_H
 #define MENU_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "system.h"
+#include "user.h"
+#include "admin.h"
+
 /*主菜单 实现功能：主菜单信息，执行操作通过调用别的函数内的接口*/
 void mainMenu() {
     while (1) {

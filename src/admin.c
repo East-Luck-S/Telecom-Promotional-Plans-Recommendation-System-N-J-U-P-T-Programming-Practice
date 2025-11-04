@@ -3,7 +3,7 @@
 #include <string.h>
 #include <conio.h> /* getch() 用于密码输入遮掩，实现无回显输入读取 */
 
-#include "admin.h"
+#include "../inc/admin.h"
 
 /*以下为对管理员信息的管理*/
 // 从文件加载管理员账号
@@ -258,92 +258,102 @@ void modify_package(Package pkgs[], int count) {
 	printf("修改保存。\n");
 }
 
+
 // 读取所有用户历史消费数据，填充 histories 数组，返回实际条数
-// 动态分配用户历史数组，返回指针和数量
-UserHistory* load_user_history(int *count) {
+int load_user_history(UserHistory histories[], int *count) {
 	FILE *fp = fopen(USER_HISTORY_FILE, "r");
-	if (!fp) { *count = 0; return NULL; }
-	int capacity = 32, idx = 0;
-	UserHistory *histories = (UserHistory*)malloc(capacity * sizeof(UserHistory));
+	if (!fp) { *count = 0; return 0; }
+	int idx = 0;
 	while (!feof(fp)) {
 		UserHistory h;
+		// 读取用户ID
 		int n = fscanf(fp, "%d", &h.user_id);
 		if (n != 1) break;
+		// 读取12个月的月消费
 		for (int i = 0; i < 12; i++) fscanf(fp, "%lf", &h.monthly_fees[i]);
+		// 读取12个月的流量使用
 		for (int i = 0; i < 12; i++) fscanf(fp, "%d", &h.data_usage[i]);
+		// 读取12个月的语音分钟
 		for (int i = 0; i < 12; i++) fscanf(fp, "%d", &h.voice_usage[i]);
+		// 读取12个月的短信条数
 		for (int i = 0; i < 12; i++) fscanf(fp, "%d", &h.sms_usage[i]);
-		if (idx >= capacity) {
-			capacity *= 2;
-			histories = (UserHistory*)realloc(histories, capacity * sizeof(UserHistory));
-		}
+		// 存入数组
 		histories[idx++] = h;
+		if (idx >= 128) break;
 	}
 	fclose(fp);
 	*count = idx;
-	return histories;
+	return idx;
 }
+
 // 保存所有用户历史消费数据到文件
-int save_user_history(UserHistory *histories, int count) {
+int save_user_history(UserHistory histories[], int count) {
 	FILE *fp = fopen(USER_HISTORY_FILE, "w");
 	if (!fp) return 0;
 	for (int i = 0; i < count; i++) {
 		UserHistory *h = &histories[i];
+		// 写入用户ID
 		fprintf(fp, "%d ", h->user_id);
+		// 写入12个月的月消费
 		for (int j = 0; j < 12; j++) fprintf(fp, "%lf ", h->monthly_fees[j]);
+		// 写入12个月的流量使用
 		for (int j = 0; j < 12; j++) fprintf(fp, "%d ", h->data_usage[j]);
+		// 写入12个月的语音分钟
 		for (int j = 0; j < 12; j++) fprintf(fp, "%d ", h->voice_usage[j]);
+		// 写入12个月的短信条数
 		for (int j = 0; j < 12; j++) fprintf(fp, "%d ", h->sms_usage[j]);
 		fprintf(fp, "\n");
 	}
 	fclose(fp);
 	return 1;
 }
+
 // 读取所有用户标签数据，填充 tags 数组，返回实际条数
-// 动态分配用户标签数组，返回指针和数量
-UserTag* load_user_tags(int *count) {
+int load_user_tags(UserTag tags[], int *count) {
 	FILE *fp = fopen(USER_TAG_FILE, "r");
-	if (!fp) { *count = 0; return NULL; }
-	int capacity = 32, idx = 0;
-	UserTag *tags = (UserTag*)malloc(capacity * sizeof(UserTag));
+	if (!fp) { *count = 0; return 0; }
+	int idx = 0;
 	while (!feof(fp)) {
 		UserTag t;
+		// 读取用户ID和标签字符串（逗号分隔）
 		int n = fscanf(fp, "%d,%127[^\n]\n", &t.user_id, t.tags);
 		if (n != 2) break;
-		if (idx >= capacity) {
-			capacity *= 2;
-			tags = (UserTag*)realloc(tags, capacity * sizeof(UserTag));
-		}
 		tags[idx++] = t;
+		if (idx >= 128) break;
 	}
 	fclose(fp);
 	*count = idx;
-	return tags;
+	return idx;
 }
+
 // 保存所有用户标签数据到文件
-int save_user_tags(UserTag *tags, int count) {
+int save_user_tags(UserTag tags[], int count) {
 	FILE *fp = fopen(USER_TAG_FILE, "w");
 	if (!fp) return 0;
 	for (int i = 0; i < count; i++) {
+		// 写入用户ID和标签字符串
 		fprintf(fp, "%d,%s\n", tags[i].user_id, tags[i].tags);
 	}
 	fclose(fp);
 	return 1;
 }
+
 // 给指定用户添加标签（如“重度流量”），自动合并，避免重复
 void tag_user(int user_id, const char *tag) {
-	int count = 0;
-	UserTag *tags = load_user_tags(&count);
+	UserTag tags[128]; int count = 0;
+	load_user_tags(tags, &count);
 	int found = -1;
+	// 查找用户标签记录
 	for (int i = 0; i < count; i++) {
 		if (tags[i].user_id == user_id) { found = i; break; }
 	}
 	if (found == -1) {
-		tags = (UserTag*)realloc(tags, (count+1)*sizeof(UserTag));
+		// 用户无标签，新建一条
 		tags[count].user_id = user_id;
 		strncpy(tags[count].tags, tag, sizeof(tags[count].tags));
 		count++;
 	} else {
+		// 用户已有标签，若未包含则追加
 		if (strstr(tags[found].tags, tag) == NULL) {
 			if (strlen(tags[found].tags) + strlen(tag) + 2 < sizeof(tags[found].tags)) {
 				strcat(tags[found].tags, ",");
@@ -351,42 +361,43 @@ void tag_user(int user_id, const char *tag) {
 			}
 		}
 	}
+	// 保存更新后的标签
 	save_user_tags(tags, count);
-	free(tags);
 }
 
 // 列出指定用户的所有标签
 void list_user_tags(int user_id) {
-	int count = 0;
-	UserTag *tags = load_user_tags(&count);
+	UserTag tags[128]; int count = 0;
+	load_user_tags(tags, &count);
 	for (int i = 0; i < count; i++) {
 		if (tags[i].user_id == user_id) {
 			printf("用户ID:%d 标签:%s\n", user_id, tags[i].tags);
-			free(tags);
 			return;
 		}
 	}
 	printf("用户ID:%d 暂无标签\n", user_id);
-	free(tags);
 }
 
 // 分析指定用户的历史行为，自动生成标签画像
 void analyze_user_behavior(int user_id) {
-	int hcount = 0;
-	UserHistory *histories = load_user_history(&hcount);
+	UserHistory histories[128]; int hcount = 0;
+	load_user_history(histories, &hcount);
 	int idx = -1;
+	// 查找目标用户历史数据
 	for (int i = 0; i < hcount; i++) {
 		if (histories[i].user_id == user_id) { idx = i; break; }
 	}
-	if (idx == -1) { printf("未找到用户历史数据\n"); free(histories); return; }
+	if (idx == -1) { printf("未找到用户历史数据\n"); return; }
 	UserHistory *h = &histories[idx];
 	double avg_data = 0, avg_voice = 0, avg_sms = 0;
+	// 计算12个月平均流量、通话、短信
 	for (int i = 0; i < 12; i++) {
 		avg_data += h->data_usage[i];
 		avg_voice += h->voice_usage[i];
 		avg_sms += h->sms_usage[i];
 	}
 	avg_data /= 12; avg_voice /= 12; avg_sms /= 12;
+	// 根据阈值自动打标签
 	if (avg_data > 5000) tag_user(user_id, "重度流量");
 	else if (avg_data > 2000) tag_user(user_id, "中度流量");
 	else tag_user(user_id, "低流量");
@@ -397,6 +408,5 @@ void analyze_user_behavior(int user_id) {
 	else if (avg_sms > 30) tag_user(user_id, "中度短信");
 	else tag_user(user_id, "低短信");
 	printf("已为用户ID:%d 生成标签画像。\n", user_id);
-	free(histories);
 }
 

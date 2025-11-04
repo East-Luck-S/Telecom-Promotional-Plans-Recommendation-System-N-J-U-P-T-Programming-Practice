@@ -2,7 +2,7 @@
 #define SYSTEM_H
 
 #define MAX_PACKAGES 100 //最大套餐数量
-#define MAX_ADMINS 100 //最大管理员数量
+#define MAX_USERS 100 //最大用户数量
 
 /*套餐结构体*/
 typedef struct package
@@ -40,14 +40,12 @@ typedef struct admin_account
 } AdminAccount;
 
 //全局变量声明
-extern Package* packageList;   // 动态套餐列表
-extern int totalPackages;      // 套餐总数
-extern User* userList;         // 动态用户列表
-extern int totalUsers;         // 用户总数
-extern User currentUser;       // 当前登录用户
-extern int matchedCount;       // 匹配数量
+extern char frontEndBuffer[1024];  // 接收前端数据缓冲区
+extern char backEndBuffer[1024];   // 发送前端数据缓冲区
+extern int pkgCount;               // 总套餐数量
+extern int userCount;              // 用户数量
 extern Package allPackages[MAX_PACKAGES];    // 存储管理员维护的所有套餐
-extern AdminAccount adminAccounts[MAX_ADMINS]; // 存储管理员账号
+extern User currentUser[MAX_USERS];           // 当前登录用户信息
 extern int matchedPkgCount;        // 匹配到的套餐数量
 extern Package matchedPackages[20];// 匹配结果列表
 static const char *PKG_FILE = "packages.txt";// 套餐数据文件

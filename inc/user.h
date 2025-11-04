@@ -6,25 +6,21 @@
 #include <string.h>
 #include <windows.h>
 
-// 工具函数
-void clearInputBuffer();                  // 清空输入缓冲区
-int isStrEmpty(const char* str);          // 判断字符串是否为空
-void trimStr(char* str);                  // 去除字符串首尾空格
+//函数声明
+// 初始化与前后端交互模块
+void initUserSystem();                  // 初始化系统（与前端建立连接，同步套餐数据）
+void receiveDataFromFrontEnd();         // 接收前端数据
+void sendDataToFrontEnd(const char* data); // 向前端发送数据
 
-// 文件操作函数
-int loadPackagesFromText();               // 从文本文件加载套餐
-int savePackagesToText();                 // 保存套餐到文本文件
-int loadUsersFromText();                  // 从文本文件加载用户
-int saveUsersToText();                    // 保存用户到文本文件
-User* findUser(const char* userId);       // 查找用户
-
-// 核心功能函数
-void inputDemandByForm();                 // 填写需求调查
-void calcUserStar();                      // 计算用户星级
-void matchPackagesByDemand();             // 匹配套餐
-void showMatchedPackages();               // 显示推荐套餐
-void queryUserPackage();                  // 查询个人套餐
-void applyPackageChange();                // 变更套餐
-void userFunctionMenu();                  // 用户功能菜单
+// 用户核心功能模块
+void userLogin();                       // 用户登录
+Package inputDemandByForm();            // 调查表填写
+void calcUserStar();                    // 计算用户星级
+void matchPackagesByDemand(Package demand); // 按需求匹配套餐
+void showMatchedPackages();             // 展示推荐套餐并确认选择
+void queryUserPackage();                // 查询本人套餐信息
+void searchPackage();                   // 搜索窗口
+void applyPackageChange();              // 变更套餐需求
+void exitUserSystem();                  // 退出系统
 
 #endif // USER_H

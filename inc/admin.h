@@ -40,14 +40,14 @@ void add_package(Package pkgs[], int *count);// 添加新套餐
 void modify_package(Package pkgs[], int count);// 修改套餐
 void list_packages(Package pkgs[], int count);// 列出所有套餐
 
-/* 用户需求信息分区（动态管理） */
-UserHistory* load_user_history(int *count); // 动态读取所有用户历史消费数据，返回指针和条数
-int save_user_history(UserHistory *histories, int count); // 保存所有用户历史消费数据到文件
-UserTag* load_user_tags(int *count); // 动态读取所有用户标签数据，返回指针和条数
-int save_user_tags(UserTag *tags, int count); // 保存所有用户标签数据到文件
-void tag_user(int user_id, const char *tag); // 给指定用户添加标签（如“重度流量”），自动合并
-void list_user_tags(int user_id); // 列出指定用户的所有标签
-void analyze_user_behavior(int user_id); // 分析指定用户的历史行为，自动生成标签或画像
+/* 用户需求信息分区 */
+int load_user_history(UserHistory histories[], int *count);// 读取所有用户历史消费数据，返回实际条数
+int save_user_history(UserHistory histories[], int count);// 保存所有用户历史消费数据到文件
+int load_user_tags(UserTag tags[], int *count);// 读取所有用户标签数据，返回实际条数
+int save_user_tags(UserTag tags[], int count);// 保存所有用户标签数据到文件
+void tag_user(int user_id, const char *tag);// 给指定用户添加标签（如“重度流量”），自动合并
+void list_user_tags(int user_id);// 列出指定用户的所有标签
+void analyze_user_behavior(int user_id);// 分析指定用户的历史行为，自动生成标签或画像
 
 #endif /* ADMIN_H */
 

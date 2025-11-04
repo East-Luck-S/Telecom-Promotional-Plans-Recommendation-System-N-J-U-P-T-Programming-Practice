@@ -241,14 +241,42 @@ User* findUser(const char* userId) {
     return NULL;
 }
 
-// 录入用户需求（示例，可根据业务逻辑扩展）
-void inputUserDemand() {
-    printf("\n===== 录入用户需求（示例） =====\n");
-    // 可根据新版结构体扩展需求录入逻辑（如使用年限、消费金额等）
-    printf("功能待扩展...\n");
+// 填写需求调查
+void inputDemandByForm() {
+    printf("\n===== 填写需求调查 =====\n");
+    printf("请输入每月通话需求（分钟）：");
+    scanf("%d", &currentUser.callDemand);
+    clearInputBuffer();
+
+    printf("请输入每月流量需求（MB）：");
+    scanf("%d", &currentUser.flowDemand);
+    clearInputBuffer();
+
+    printf("是否需要宽带（1=需要，0=不需要）：");
+    scanf("%d", &currentUser.broadbandDemand);
+    clearInputBuffer();
+
+    printf("请输入套餐使用年限（年）：");
+    scanf("%d", &currentUser.useYears);
+    clearInputBuffer();
+
+    printf("请输入累计消费金额（元）：");
+    scanf("%f", &currentUser.totalCost);
+    clearInputBuffer();
+
+    User* user = findUser(currentUser.userId);
+    if (user) {
+        user->callDemand = currentUser.callDemand;
+        user->flowDemand = currentUser.flowDemand;
+        user->broadbandDemand = currentUser.broadbandDemand;
+        user->useYears = currentUser.useYears;
+        user->totalCost = currentUser.totalCost;
+    }
+    saveUsersToText();
+    printf("需求提交成功！\n");
 }
 
-// 计算用户星级（基于累计消费金额，规则可自定义）
+// 计算用户星级
 void calcUserStar() {
     int star = 1;
     if (currentUser.totalCost >= 800) star = 5;
@@ -260,20 +288,77 @@ void calcUserStar() {
     printf("用户：%s（%s）\n", currentUser.userName, currentUser.userId);
     printf("累计消费金额：%.2f元\n", currentUser.totalCost);
     printf("星级评定：%d星\n", star);
+    currentUser.userStar = star;
+
+    User* user = findUser(currentUser.userId);
+    if (user) {
+        user->userStar = star;
+    }
+    saveUsersToText();
 }
 
-// 匹配套餐（示例框架，需根据新版套餐字段完善逻辑）
+// 匹配套餐
 void matchPackagesByDemand() {
-    printf("\n===== 匹配套餐（示例） =====\n");
-    // 需基于Package的data_mb、voice_minutes等字段与用户需求匹配，此处为框架
-    printf("功能待扩展...\n");
+    matchedCount = 0;
+    if (totalPackages == 0) {
+        printf("系统中暂无套餐数据！\n");
+        return;
+    }
+
+    for (int i = 0; i < totalPackages; i++) {
+        int callMatch = (packageList[i].voice_minutes >= currentUser.callDemand) ? 1 : 0;
+        int flowMatch = (packageList[i].data_mb >= currentUser.flowDemand) ? 1 : 0;
+        int broadbandMatch = 0;
+        if (currentUser.broadbandDemand == 1) {
+            broadbandMatch = (packageList[i].broadband > 0) ? 1 : 0;
+        } else {
+            broadbandMatch = (packageList[i].broadband == 0) ? 1 : 0;
+        }
+
+        if (callMatch && flowMatch && broadbandMatch) {
+            if (matchedCount < 10) {
+                matchedPackages[matchedCount++] = packageList[i];
+            }
+        }
+    }
 }
 
-// 显示推荐套餐（示例框架）
+// 显示推荐套餐
 void showMatchedPackages() {
-    printf("\n===== 推荐套餐列表（示例） =====\n");
-    // 需遍历匹配结果并显示，此处为框架
-    printf("功能待扩展...\n");
+    if (matchedCount == 0) {
+        printf("\n暂无匹配的套餐，请调整需求后重试！\n");
+        return;
+    }
+
+    printf("\n===== 推荐套餐列表 =====\n");
+    printf("序号\t套餐ID\t套餐名称\t月资费\t通话分钟\t流量(MB)\t宽带(M)\n");
+    for (int i = 0; i < matchedCount; i++) {
+        printf("%d\t%d\t%s\t%.2f\t%d\t%d\t%d\n",
+               i+1,
+               matchedPackages[i].id,
+               matchedPackages[i].name,
+               matchedPackages[i].monthly_fee,
+               matchedPackages[i].voice_minutes,
+               matchedPackages[i].data_mb,
+               matchedPackages[i].broadband);
+    }
+
+    int choice;
+    printf("请选择套餐序号（1-%d）办理，或输入0返回：", matchedCount);
+    scanf("%d", &choice);
+    clearInputBuffer();
+
+    if (choice >= 1 && choice <= matchedCount) {
+        sprintf(currentUser.selectedPkg, "%d", matchedPackages[choice-1].id);
+        User* user = findUser(currentUser.userId);
+        if (user) {
+            strcpy(user->selectedPkg, currentUser.selectedPkg);
+        }
+        saveUsersToText();
+        printf("套餐办理成功！当前套餐：%s\n", currentUser.selectedPkg);
+    } else {
+        printf("已取消办理\n");
+    }
 }
 
 // 查询个人套餐

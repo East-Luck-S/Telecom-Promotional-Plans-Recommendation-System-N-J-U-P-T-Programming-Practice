@@ -46,6 +46,7 @@ extern char frontEndBuffer[1024];  // 接收前端数据缓冲区
 extern char backEndBuffer[1024];   // 发送前端数据缓冲区
 extern int pkgCount;               // 总套餐数量
 extern int userCount;              // 用户数量
+extern int adminCount;             // 管理员数量
 Package allPackages[MAX_PACKAGES];    // 存储管理员维护的所有套餐
 AdminAccount admins[MAX_ADMINS]; // 存储管理员账号
 int matchedPkgCount;        // 匹配到的套餐数量

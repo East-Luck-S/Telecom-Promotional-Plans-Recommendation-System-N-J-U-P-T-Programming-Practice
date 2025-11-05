@@ -11,10 +11,11 @@ void mainMenu() {
     while (1) {
         printf("\n===== 系统主菜单 =====\n");
         printf("1. 用户登录\n");
-        printf("2. 管理员登录\n");
-        printf("3. 退出系统\n");
-        printf("请选择操作（1-3）：");
-        
+        printf("2. 用户注册\n");
+        printf("3. 管理员登录\n");
+        printf("4. 退出系统\n");
+        printf("请选择操作（1-4）：");
+
         int choice;
         if (scanf("%d", &choice) != 1) {
             printf("输入错误！\n");
@@ -32,40 +33,41 @@ void mainMenu() {
                     userFunctionMenu();
                 }
                 break;
-            case 2:{
-                AdminAccount admins[32];
-                int count = 0, login_idx = -1;
-                if (!load_admin_accounts(admins, &count)) {
-                    printf("未找到管理员账号文件。\n");
-                    break;
-                }
-                if (admin_login(admins, count, &login_idx)) {
-                    adminMenu();
+            case 3:{
+                int login_idx = -1;
+                if (!admin_login(admins, adminCount, &login_idx)) {
+                    adminMenu(login_idx);
                 }
                 break;
             }
-            case 3:
+            case 4:
                 printf("程序退出。\n");
+                break;
+            case 2:
+                if (userRegister()) {
+                    printf("请使用新注册的账号登录。\n");
+                }
                 break;
             default:
                 printf("无效选项，请重新输入！\n");
         }
-        if (choice == 3) {
+        if (choice == 4) {
             break;
     }
     }
 }
 
 /*管理员菜单*/
-void adminMenu() {
+void adminMenu(int index) {
     while (1) {
+        if(!admins[index].is_super){
         printf("\n===== 管理员菜单 =====\n");
         printf("1. 显示所有套餐\n");
         printf("2. 添加新套餐\n");
         printf("3. 修改套餐\n");
         printf("4. 返回主菜单\n");
         printf("请选择操作（1-4）：");
-        
+    
         int choice;
         if (scanf("%d", &choice) != 1) {
             printf("输入错误！\n");
@@ -75,6 +77,7 @@ void adminMenu() {
         
         clearInputBuffer();
         
+
         switch (choice) {
             case 1:
                 list_packages(allPackages, pkgCount);//显示所有套餐
@@ -90,6 +93,46 @@ void adminMenu() {
                 return;
             default:
                 printf("无效选项，请重新输入！\n");
+            }
+        }
+        else{
+        printf("\n===== 管理员菜单 =====\n");
+        printf("1. 显示所有套餐\n");
+        printf("2. 添加新套餐\n");
+        printf("3. 修改套餐\n");
+        printf("4. 管理员账户修改");
+        printf("5. 返回主菜单\n");
+        printf("请选择操作（1-5）：");
+    
+        int choice;
+        if (scanf("%d", &choice) != 1) {
+            printf("输入错误！\n");
+            clearInputBuffer();
+            continue;
+        }
+        
+        clearInputBuffer();
+        
+
+        switch (choice) {
+            case 1:
+                list_packages(allPackages, pkgCount);//显示所有套餐
+                break;
+            case 2:
+                add_package(allPackages, &pkgCount);//添加套餐
+                break;
+            case 3:
+                modify_package(allPackages, pkgCount);//修改套餐
+                break;
+            case 5:
+                printf("返回主菜单...\n");
+                return;
+            case 4:
+                manage_admins(admins, &adminCount);//管理员账户修改
+                break;
+            default:
+                printf("无效选项，请重新输入！\n");
+            }
         }
     }
 }

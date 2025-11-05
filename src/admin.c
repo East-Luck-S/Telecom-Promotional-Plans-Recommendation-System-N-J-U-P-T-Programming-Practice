@@ -6,6 +6,7 @@
 #include "admin.h"
 
 int pkgCount=0;			   // 总套餐数量  
+int adminCount = 0;		 // 管理员数量
 
 /*以下为对管理员信息的管理*/
 // 从文件加载管理员账号
@@ -175,62 +176,60 @@ int load_packages(Package pkgs[], int *count) {
         return 0;
     }
 
+	*count = 0;
     // 读取第一行的套餐总数
     char line[512];
-    if (!fgets(line, sizeof(line), fp)) {  // 读取第一行
-        fclose(fp);
-        *count = 0;
-        return 0;
-    }
-    *count = atoi(line);  // 转换为整数
 
     // 检查数量是否超过上限
     if (*count > MAX_PACKAGES) {
         *count = MAX_PACKAGES;
     }
 
-    // 循环读取每个套餐
-    for (int i = 0; i < *count; i++) {
-        if (!fgets(line, sizeof(line), fp)) {  // 读取一行套餐数据
-            break;  // 若提前结束，实际数量为当前i
+    while (*count < MAX_PACKAGES && fgets(line, sizeof(line), fp)) {
+        // 跳过空行（去除首尾空格后为空）
+        trimStr(line);  // 使用user.c中定义的trimStr函数去除空格
+        if (isStrEmpty(line)) {  // 使用user.c中定义的isStrEmpty判断空行
+            continue;
         }
 
-        // 去除行尾换行符
+        // 去除行尾换行符（防止解析时包含换行符）
         line[strcspn(line, "\n")] = '\0';
 
-        // 按逗号分割字段（使用strtok）
+        // 按逗号分割字段
         char *token = strtok(line, ",");
-        if (token) pkgs[i].id = atoi(token);  // 套餐ID
+        if (token) pkgs[*count].id = atoi(token);  // 套餐ID
 
         token = strtok(NULL, ",");
-        if (token) strncpy(pkgs[i].name, token, sizeof(pkgs[i].name) - 1);  // 名称
+        if (token) strncpy(pkgs[*count].name, token, sizeof(pkgs[*count].name) - 1);  // 名称
 
         token = strtok(NULL, ",");
-        if (token) pkgs[i].monthly_fee = atof(token);  // 月费
+        if (token) pkgs[*count].monthly_fee = atof(token);  // 月费
 
         token = strtok(NULL, ",");
-        if (token) pkgs[i].data_mb = atoi(token);  // 流量
+        if (token) pkgs[*count].data_mb = atoi(token);  // 流量
 
         token = strtok(NULL, ",");
-        if (token) pkgs[i].voice_minutes = atoi(token);  // 语音分钟
+        if (token) pkgs[*count].voice_minutes = atoi(token);  // 语音分钟
 
         token = strtok(NULL, ",");
-        if (token) pkgs[i].sms = atoi(token);  // 短信条数
+        if (token) pkgs[*count].sms = atoi(token);  // 短信条数
 
         token = strtok(NULL, ",");
-        if (token) pkgs[i].contract_months = atoi(token);  // 合约月数
+        if (token) pkgs[*count].contract_months = atoi(token);  // 合约月数
 
         token = strtok(NULL, ",");
-        if (token) strncpy(pkgs[i].start_date, token, sizeof(pkgs[i].start_date) - 1);  // 生效日期
+        if (token) strncpy(pkgs[*count].start_date, token, sizeof(pkgs[*count].start_date) - 1);  // 生效日期
 
         token = strtok(NULL, ",");
-        if (token) strncpy(pkgs[i].end_date, token, sizeof(pkgs[i].end_date) - 1);  // 终止日期
+        if (token) strncpy(pkgs[*count].end_date, token, sizeof(pkgs[*count].end_date) - 1);  // 终止日期
 
         token = strtok(NULL, ",");
-        if (token) pkgs[i].is_active = atoi(token);  // 是否启用
+        if (token) pkgs[*count].is_active = atoi(token);  // 是否启用
 
         token = strtok(NULL, ",");
-        if (token) strncpy(pkgs[i].description, token, sizeof(pkgs[i].description) - 1);  // 描述
+        if (token) strncpy(pkgs[*count].description, token, sizeof(pkgs[*count].description) - 1);  // 描述
+
+        (*count)++;  // 成功解析一行，数量+1
     }
 
     fclose(fp);
@@ -240,9 +239,6 @@ int load_packages(Package pkgs[], int *count) {
 int save_packages(Package pkgs[], int count) {
     FILE *fp = fopen(PKG_FILE, "w");  // 文本模式写入
     if (!fp) return 0;
-
-    // 第一行写入套餐总数
-    fprintf(fp, "%d\n", count);
 
     // 循环写入每个套餐的字段（逗号分隔）
     for (int i = 0; i < count; i++) {

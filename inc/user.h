@@ -22,6 +22,7 @@ User* findUser(const char* userId);       // 查找用户
 
 // 核心功能函数
 void loginUser();                         // 用户登录
+int userRegister();                      // 用户注册
 void inputDemandByForm();                 // 填写需求调查
 void calcUserStar();                      // 计算用户星级
 void matchPackagesByDemand();            // 根据需求匹配套餐

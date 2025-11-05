@@ -146,19 +146,12 @@ int userRegister() {
 
 // 用户登录
 void loginUser() {
-<<<<<<< HEAD
    if(loadUsersFromText() != 1)
    {
      printf("error\n");
      return;
    }
 
-=======
-    if(!loadUsersFromText()) {
-        printf("[错误] 无法加载用户数据文件！\n");
-        return;
-    }
->>>>>>> f6efa6b29a6a7c2dd2665981c53797208f87c578
     char id[20], pwd[20];
 
     printf("\n===== 用户登录 =====\n");

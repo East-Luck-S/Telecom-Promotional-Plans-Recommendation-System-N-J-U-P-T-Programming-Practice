@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "user.c"
-#include "admin.c"
+#include "user.h"
+#include "admin.h"
+#include "menu.h"
+#include "system.h"
 
-//清空输入缓存区函数
 /*主菜单 实现功能：主菜单信息，执行操作通过调用别的函数内的接口*/
 void mainMenu() {
     while (1) {
@@ -25,23 +26,33 @@ void mainMenu() {
         
         switch (choice) {
             case 1:
-                userLogin();//用户登入函数
+                loginUser();//用户登入函数
                 // 登录成功后跳转到用户功能菜单
                 if (strlen(currentUser->userId) > 0) {
                     userFunctionMenu();
                 }
                 break;
-            case 2:
-                if (adminLogin()) {//管理员账号登入函数
+            case 2:{
+                AdminAccount admins[32];
+                int count = 0, login_idx = -1;
+                if (!load_admin_accounts(admins, &count)) {
+                    printf("未找到管理员账号文件。\n");
+                    break;
+                }
+                if (admin_login(admins, count, &login_idx)) {
                     adminMenu();
                 }
                 break;
+            }
             case 3:
-                exitUserSystem();//返回主菜单函数
+                printf("程序退出。\n");
                 break;
             default:
                 printf("无效选项，请重新输入！\n");
         }
+        if (choice == 3) {
+            break;
+    }
     }
 }
 
@@ -51,11 +62,9 @@ void adminMenu() {
         printf("\n===== 管理员菜单 =====\n");
         printf("1. 显示所有套餐\n");
         printf("2. 添加新套餐\n");
-        printf("3. 删除套餐\n");
-        printf("4. 修改套餐\n");
-        printf("5. 统计套餐用户数\n");
-        printf("6. 返回主菜单\n");
-        printf("请选择操作（1-6）：");
+        printf("3. 修改套餐\n");
+        printf("4. 返回主菜单\n");
+        printf("请选择操作（1-4）：");
         
         int choice;
         if (scanf("%d", &choice) != 1) {
@@ -68,21 +77,15 @@ void adminMenu() {
         
         switch (choice) {
             case 1:
-                showAllPackages();//显示所有套餐
+                list_packages(allPackages, pkgCount);//显示所有套餐
                 break;
             case 2:
-                addPackage();//添加套餐
+                add_package(allPackages, &pkgCount);//添加套餐
                 break;
             case 3:
-                deletePackage();//删除套餐
+                modify_package(allPackages, pkgCount);//修改套餐
                 break;
             case 4:
-                modifyPackage();//修改套餐
-                break;
-            case 5:
-                statPackageUsers();//统计套餐用户数
-                break;
-            case 6:
                 printf("返回主菜单...\n");
                 return;
             default:
@@ -120,11 +123,9 @@ void userFunctionMenu() {
                 calcUserStar();//查看客户星级
                 break;
             case 3:
-                {
-                    Package demand = inputDemandByForm();
-                    matchPackagesByDemand(demand);
-                    showMatchedPackages();
-                }
+                inputDemandByForm();
+                matchPackagesByDemand();
+                showMatchedPackages();
                 break;
             case 4:
                 queryUserPackage();//查询套餐

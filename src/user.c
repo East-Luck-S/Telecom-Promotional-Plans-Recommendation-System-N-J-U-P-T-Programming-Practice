@@ -2,17 +2,12 @@
 #include "system.h"
 
 // 全局变量定义
+int userCount=0;              // 用户数量
 Package* packageList = NULL;
 int totalPackages = 0;
 User* userList = NULL;
 int totalUsers = 0;
 User* currentUser;
-
-// 清空输入缓冲区
-void clearInputBuffer() {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}
 
 // 判断字符串是否为空（全空格或空）
 int isStrEmpty(const char* str) {
@@ -23,6 +18,46 @@ int isStrEmpty(const char* str) {
     }
     return 1;
 }
+
+// 用户登录
+void loginUser() {
+    char id[20], pwd[20];
+
+    printf("\n===== 用户登录 =====\n");
+    printf("请输入用户ID: ");
+    if (scanf("%19s", id) != 1) {
+        printf("[错误] 输入格式错误！\n");
+        clearInputBuffer();
+        return;
+    }
+    clearInputBuffer();
+
+    printf("请输入密码: ");
+    if (scanf("%19s", pwd) != 1) {
+        printf("[错误] 输入格式错误！\n");
+        clearInputBuffer();
+        return;
+    }
+    clearInputBuffer();
+
+    // 查找用户
+    User* user = findUser(id);
+    if (!user) {
+        printf("[错误] 用户ID不存在！\n");
+        currentUser = NULL;
+        return;
+    }
+
+    // 校验密码
+    if (strcmp(user->userPwd, pwd) == 0) {
+        currentUser = user;
+        printf("[成功] 用户 %s 登录成功！\n", currentUser->userName);
+    } else {
+        printf("[错误] 密码错误！\n");
+        currentUser = NULL;
+    }
+}
+
 
 // 去除字符串首尾空格
 void trimStr(char* str) {
@@ -339,6 +374,7 @@ void calcUserStar() {
     printf("当前星级：%d星\n", finalStar);
 }
 
+
 // 工具函数：计算套餐匹配得分
 static float calcMatchScore(const Package* pkg, const Demand* demand, int userStar) {
     if (!pkg || !demand || !demand->valid) return -1.0f;
@@ -370,6 +406,25 @@ static void swapPackages(Package* a, Package* b) {
     Package temp = *a;
     *a = *b;
     *b = temp;
+}
+
+// 3. 根据需求匹配套餐（补充实现）
+void matchPackagesByDemand() {
+    matchedPkgCount = 0; // 重置匹配结果
+    
+    // 检查需求是否有效
+    if (!userDemand.valid) {
+        printf("[错误] 请先填写有效的需求调查！\n");
+        return;
+    }
+    
+    // 遍历所有套餐，计算匹配得分
+    for (int i = 0; i < totalPackages; i++) {
+        float score = calcMatchScore(&packageList[i], &userDemand, currentUser->userStar);
+        if (score > 0) { // 得分大于0视为有效匹配
+            matchedPackages[matchedPkgCount++] = packageList[i];
+        }
+    }
 }
 
 // 4. 显示推荐套餐

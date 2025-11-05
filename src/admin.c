@@ -3,7 +3,9 @@
 #include <string.h>
 #include <conio.h> /* getch() 用于密码输入遮掩，实现无回显输入读取 */
 
-#include "../inc/admin.h"
+#include "admin.h"
+
+int pkgCount=0;			   // 总套餐数量  
 
 /*以下为对管理员信息的管理*/
 // 从文件加载管理员账号

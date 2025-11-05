@@ -1,4 +1,0 @@
-# 用户名,密码,类型(super可选)
-admin,admin123,super
-manager1,pass1,normal
-manager2,pass2,normal

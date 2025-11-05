@@ -19,12 +19,139 @@ int isStrEmpty(const char* str) {
     return 1;
 }
 
+// 工具函数：检查用户ID是否已存在
+static int isUserIdExists(const char* userId) {
+    for (int i = 0; i < totalUsers; i++) {
+        if (strcmp(userList[i].userId, userId) == 0) {
+            return 1; // 存在
+        }
+    }
+    return 0; // 不存在
+}
+
+// 用户注册函数
+int userRegister() {
+    // 1. 加载已有用户数据,防止新用户被覆盖掉
+    if (!loadUsersFromText()) {
+        printf("[错误] 加载用户数据失败，无法注册！\n");
+        return 0;
+    }
+
+    // 3. 定义新用户变量
+    User newUser = {0};
+    char password1[20], password2[20];
+
+    // 4. 输入并校验用户ID
+    while (1) {
+        printf("\n===== 用户注册 =====");
+        printf("\n请输入用户ID（3-20位，字母/数字）：");
+        if (scanf("%19s", newUser.userId) != 1) {
+            printf("[错误] 输入格式错误，请重新输入！\n");
+            clearInputBuffer();
+            continue;
+        }
+        clearInputBuffer();
+
+        int idLen = strlen(newUser.userId);
+        if (idLen < 3 || idLen > 20) {
+            printf("[错误] 用户ID长度需在3-20位之间！\n");
+            continue;
+        }
+
+        int valid = 1;
+        for (int i = 0; i < idLen; i++) {
+            if (!isalnum((unsigned char)newUser.userId[i])) {
+                valid = 0;
+                break;
+            }
+        }
+        if (!valid) {
+            printf("[错误] 用户ID只能包含字母和数字！\n");
+            continue;
+        }
+
+        if (isUserIdExists(newUser.userId)) {
+            printf("[错误] 该用户ID已被注册，请更换！\n");
+            continue;
+        }
+
+        break;
+    }
+
+    // 5. 输入并校验密码
+    while (1) {
+        printf("请设置密码（3-16位）：");
+        if (scanf("%19s", password1) != 1) {
+            printf("[错误] 输入格式错误，请重新输入！\n");
+            clearInputBuffer();
+            continue;
+        }
+        clearInputBuffer();
+
+        if (strlen(password1) < 3 || strlen(password1) > 16) {
+            printf("[错误] 密码长度需在3-16位之间！\n");
+            continue;
+        }
+
+        printf("请确认密码：");
+        if (scanf("%19s", password2) != 1) {
+            printf("[错误] 输入格式错误，请重新输入！\n");
+            clearInputBuffer();
+            continue;
+        }
+        clearInputBuffer();
+
+        if (strcmp(password1, password2) != 0) {
+            printf("[错误] 两次输入的密码不一致！\n");
+            continue;
+        }
+        strcpy(newUser.userPwd, password1);
+        break;
+    }
+
+    // 6. 输入用户名
+    printf("请输入用户名：");
+    if (scanf("%19s", newUser.userName) != 1) {
+        printf("[错误] 输入格式错误，使用默认用户名！\n");
+        strcpy(newUser.userName, "默认用户");
+    }
+    clearInputBuffer();
+
+    // 7. 初始化其他字段
+    newUser.selectedPkg[0] = '\0';  // 未选套餐
+    newUser.useYears = 0;           // 使用年限0
+    newUser.totalCost = 0.0;        // 累计消费0
+    newUser.userStar = 1;           // 初始星级1星
+
+    // 8. 扩容用户列表并添加新用户
+    User* tempList = (User*)realloc(userList, (totalUsers + 1) * sizeof(User));
+    if (!tempList) {
+        printf("[错误] 内存分配失败，注册失败！\n");
+        return 0;
+    }
+    userList = tempList;
+    userList[totalUsers] = newUser;
+    totalUsers++;
+
+    // 9. 保存到文件
+    if (!saveUsersToText()) {
+        printf("[错误] 保存用户数据失败，但注册流程已完成！\n");
+        return 0;
+    }
+
+    printf("\n[成功] 用户注册完成！用户ID：%s，密码：%s\n", 
+           newUser.userId, newUser.userPwd);
+    return 1;
+}
+
 // 用户登录
 void loginUser() {
-    if(!loadUsersFromText()) {
-        printf("[错误] 无法加载用户数据文件！\n");
-        return;
-    }
+   if(loadUsersFromText() != 1)
+   {
+     printf("error\n");
+     return;
+   }
+
     char id[20], pwd[20];
 
     printf("\n===== 用户登录 =====\n");

@@ -29,6 +29,11 @@ static int isUserIdExists(const char* userId) {
     return 0; // 不存在
 }
 
+// 新增：检查输入是否为回退指令（q/Q）
+static int isQuitInput(const char* input) {
+    return (strcmp(input, "q") == 0 || strcmp(input, "Q") == 0);
+}
+
 // 用户注册函数
 int userRegister() {
     // 1. 加载已有用户数据,防止新用户被覆盖掉
@@ -38,21 +43,29 @@ int userRegister() {
     }
 
     // 3. 定义新用户变量
+    char input[20];
     User newUser = {0};
     char password1[20], password2[20];
 
     // 4. 输入并校验用户ID
     while (1) {
-        printf("\n===== 用户注册 =====");
+        printf("\n===== 用户注册(输入q/Q可取消注册) =====");
         printf("\n请输入用户ID（3-20位，字母/数字）：");
-        if (scanf("%19s", newUser.userId) != 1) {
+        
+        if (scanf("%19s", input) != 1) {
             printf("[错误] 输入格式错误，请重新输入！\n");
             clearInputBuffer();
             continue;
         }
         clearInputBuffer();
 
-        int idLen = strlen(newUser.userId);
+        // 新增回退判断
+        if (isQuitInput(input)) {
+            printf("[提示] 已取消注册流程！\n");
+            return 0;
+        }
+       
+        int idLen = strlen(input);
         if (idLen < 3 || idLen > 20) {
             printf("[错误] 用户ID长度需在3-20位之间！\n");
             continue;
@@ -60,7 +73,7 @@ int userRegister() {
 
         int valid = 1;
         for (int i = 0; i < idLen; i++) {
-            if (!isalnum((unsigned char)newUser.userId[i])) {
+            if (!isalnum((unsigned char)input[i])) {
                 valid = 0;
                 break;
             }
@@ -70,52 +83,78 @@ int userRegister() {
             continue;
         }
 
-        if (isUserIdExists(newUser.userId)) {
+        if (isUserIdExists(input)) {
             printf("[错误] 该用户ID已被注册，请更换！\n");
             continue;
         }
+
+        // 确认用户ID有效，保存到新用户信息
+        strcpy(newUser.userId, input);
 
         break;
     }
 
     // 5. 输入并校验密码
     while (1) {
-        printf("请设置密码（3-16位）：");
-        if (scanf("%19s", password1) != 1) {
+        printf("请设置密码（3-16位,输入q/Q可取消注册）：");
+        if (scanf("%19s", input) != 1) {
             printf("[错误] 输入格式错误，请重新输入！\n");
             clearInputBuffer();
             continue;
         }
         clearInputBuffer();
 
-        if (strlen(password1) < 3 || strlen(password1) > 16) {
+        // 检查是否回退
+        if (isQuitInput(input)) {
+            printf("[提示] 已取消注册流程！\n");
+            return 0;
+        }
+
+        if (strlen(input) < 3 || strlen(input) > 16) {
             printf("[错误] 密码长度需在3-16位之间！\n");
             continue;
         }
 
-        printf("请确认密码：");
-        if (scanf("%19s", password2) != 1) {
+        strcpy(password1, input); // 保存第一次输入的密码
+
+        printf("请确认密码（输入q/Q可取消注册）：");
+        if (scanf("%19s", input) != 1) {
             printf("[错误] 输入格式错误，请重新输入！\n");
             clearInputBuffer();
             continue;
         }
         clearInputBuffer();
+
+         // 检查确认密码时是否回退
+        if (isQuitInput(input)) {
+            printf("[提示] 已取消注册流程！\n");
+            return 0;
+        }
+        strcpy(password2, input);
 
         if (strcmp(password1, password2) != 0) {
             printf("[错误] 两次输入的密码不一致！\n");
             continue;
         }
+
         strcpy(newUser.userPwd, password1);
         break;
     }
 
-    // 6. 输入用户名
-    printf("请输入用户名：");
-    if (scanf("%19s", newUser.userName) != 1) {
+    // 6. 输入用户名（支持回退）
+    printf("请输入用户名（输入q/Q可取消）：");
+    if (scanf("%19s", input) != 1) {
         printf("[错误] 输入格式错误，使用默认用户名！\n");
         strcpy(newUser.userName, "默认用户");
+    } else {
+        clearInputBuffer();
+        // 检查是否回退
+        if (isQuitInput(input)) {
+            printf("[提示] 已取消注册流程！\n");
+            return 0;
+        }
+        strcpy(newUser.userName, input);
     }
-    clearInputBuffer();
 
     // 7. 初始化其他字段
     newUser.selectedPkg[0] = '\0';  // 未选套餐
@@ -647,7 +686,7 @@ void applyPackageChange() {
     User* user = findUser(currentUser->userId);
     if (user) {
         strncpy(user->selectedPkg, pkgId, 19);
-    }
+    } 
     if (saveUsersToText()) {
         printf("套餐变更成功！\n");
     } else {

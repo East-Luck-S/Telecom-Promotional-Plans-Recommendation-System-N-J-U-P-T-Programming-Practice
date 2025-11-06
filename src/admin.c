@@ -8,7 +8,7 @@
 int pkgCount=0;			   // 总套餐数量  
 int adminCount = 0;		 // 管理员数量
 
-// 新增：检查输入是否为回退指令（q/Q）
+// 检查输入是否为回退指令（q/Q）
 static int isQuitInput(const char* input) {
     return (strcmp(input, "q") == 0 || strcmp(input, "Q") == 0);
 }

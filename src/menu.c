@@ -10,11 +10,12 @@
 void mainMenu() {
     while (1) {
         printf("\n===== 系统主菜单 =====\n");
-        printf("1. 用户登录\n");
-        printf("2. 用户注册\n");
-        printf("3. 管理员登录\n");
-        printf("4. 退出系统\n");
+        printf("1. [用户登录]\n");
+        printf("2. [用户注册]\n");
+        printf("3. [管理员登录]\n");
+        printf("4. [退出系统]\n");
         printf("请选择操作（1-4）：");
+        printf("\n======================\n");
 
         int choice;
         if (scanf("%d", &choice) != 1) {
@@ -63,13 +64,13 @@ void adminMenu(int index) {
     while (1) {
         printf("\n===== 管理员菜单 =====\n");
         // 公共选项（普通/超级管理员都可见）
-        printf("1. 显示所有套餐\n");
-        printf("2. 添加新套餐\n");
-        printf("3. 修改套餐\n");
+        printf("1. [显示所有套餐]\n");
+        printf("2. [添加新套餐]\n");
+        printf("3. [修改套餐]\n");
         // 超级管理员特有选项
         if (admins[index].is_super) {
-            printf("4. 管理员账户修改\n");
-            printf("5. 返回主菜单\n");
+            printf("4. [管理员账户修改]\n");
+            printf("5. [返回主菜单]\n");
         } else {
             printf("4. 返回主菜单\n");
         }
@@ -102,13 +103,14 @@ void adminMenu(int index) {
 void userFunctionMenu() {
     while (1) {
         printf("\n===== 用户功能菜单 =====\n");
-        printf("1. 填写需求调查\n");
-        printf("2. 查看用户星级\n");
-        printf("3. 查看推荐套餐\n");
-        printf("4. 查询个人套餐\n");
-        printf("5. 变更套餐\n");
-        printf("6. 返回主菜单\n");
+        printf("1. [填写需求调查]\n");
+        printf("2. [查看用户星级]\n");
+        printf("3. [查看推荐套餐]\n");
+        printf("4. [查询个人套餐]\n");
+        printf("5. [变更套餐]\n");
+        printf("6. [返回主菜单]\n");
         printf("请选择操作（1-6）：");
+        printf("\n=======================\n");
         
         int choice;
         if (scanf("%d", &choice) != 1) {

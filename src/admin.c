@@ -8,6 +8,11 @@
 int pkgCount=0;			   // 总套餐数量  
 int adminCount = 0;		 // 管理员数量
 
+// 新增：检查输入是否为回退指令（q/Q）
+static int isQuitInput(const char* input) {
+    return (strcmp(input, "q") == 0 || strcmp(input, "Q") == 0);
+}
+
 /*以下为对管理员信息的管理*/
 // 从文件加载管理员账号
 int load_admin_accounts(AdminAccount admins[], int *count)
@@ -103,68 +108,160 @@ int admin_login(AdminAccount admins[], int count, int *login_idx)
 }
 // 管理员批量管理（仅全局管理员可用）
 void manage_admins(AdminAccount admins[], int *count) {
-	while (1) {
-		printf("\n--- 管理员批量管理 ---\n");
-		printf("1. 列出所有管理员\n2. 添加管理员\n3. 删除管理员\n4. 修改管理员密码\n0. 返回\n选择: ");
-		int cmd;
-		if (scanf("%d", &cmd) != 1) { getchar(); continue; }
-		getchar();
-		switch (cmd) {
-			case 0:
-				return;
-			case 1:
-					printf("\n所有管理员：\n");
-					for (int i = 0; i < *count; i++) {
-						printf("[%d] 用户名:%s 类型:%s\n", i+1, admins[i].username, admins[i].is_super ? "全局" : "普通");
-					}
-					break;
-			case 2:
-					if (*count >= 32) { printf("管理员数量已达上限。\n"); break; }
-					AdminAccount newa;
-					printf("输入新管理员用户名: ");
-					scanf("%31s", newa.username); getchar();
-					printf("输入新管理员密码: ");
-					read_password(newa.password, sizeof(newa.password));
-					printf("类型 (1=全局, 0=普通): ");
-					scanf("%d", &newa.is_super); getchar();
-					admins[*count] = newa;
-					(*count)++;
-					save_admin_accounts(admins, *count);
-					printf("添加成功。\n");
-					break;
-			case 3:
-					printf("输入要删除的管理员用户名: ");
-					char uname[32];
-					scanf("%31s", uname); getchar();
-					int found = -1;
-					for (int i = 0; i < *count; i++) {
-						if (strcmp(admins[i].username, uname) == 0) { found = i; break; }
-					}
-					if (found == -1) { printf("未找到该管理员。\n"); break; }
-					for (int i = found; i < *count-1; i++) admins[i] = admins[i+1];
-					(*count)--;
-					save_admin_accounts(admins, *count);
-					printf("删除成功。\n");
-					break;
-			case 4:
-					printf("输入要修改密码的管理员用户名: ");
-					char uname2[32];
-					scanf("%31s", uname2); getchar();
-					int found2 = -1;
-					for (int i = 0; i < *count; i++) {
-						if (strcmp(admins[i].username, uname2) == 0) { found2 = i; break; }
-					}
-					if (found2 == -1) { printf("未找到该管理员。\n"); break; }
-					printf("输入新密码: ");
-					read_password(admins[found2].password, sizeof(admins[found2].password));
-					save_admin_accounts(admins, *count);
-					printf("密码修改成功。\n");
-					break;
-			default:
-				printf("无效选项。\n");
-				break;
-		}
-	}
+    while (1) {
+        printf("\n--- 管理员批量管理 ---\n");
+        printf("1. 列出所有管理员\n2. 添加管理员\n3. 删除管理员\n4. 修改管理员密码\n0. 返回\n选择: ");
+        char cmdInput[16];
+        if (fgets(cmdInput, sizeof(cmdInput), stdin) == NULL) {
+            printf("输入错误，返回上一级...\n");
+            clearInputBuffer();
+            return;
+        }
+        cmdInput[strcspn(cmdInput, "\n")] = '\0';
+        if (isQuitInput(cmdInput)) {  // 支持q/Q直接返回
+            printf("返回上一级菜单...\n");
+            return;
+        }
+        int cmd = atoi(cmdInput);
+        if (cmd < 0 || cmd > 4) {
+            printf("无效选项，请重新输入！\n");
+            continue;
+        }
+
+        switch (cmd) {
+            case 0:
+                return;
+            case 1:
+                printf("\n所有管理员：\n");
+                for (int i = 0; i < *count; i++) {
+                    printf("[%d] 用户名:%s 类型:%s\n", i+1, admins[i].username, admins[i].is_super ? "全局" : "普通");
+                }
+                break;
+            case 2: {
+                if (*count >= 32) { printf("管理员数量已达上限。\n"); break; }
+                AdminAccount newa;
+                char input[32];
+
+                // 输入用户名（支持取消）
+                printf("输入新管理员用户名 (输入q/Q取消): ");
+                if (fgets(input, sizeof(input), stdin) == NULL) {
+                    printf("输入错误，取消添加...\n");
+                    clearInputBuffer();
+                    break;
+                }
+                input[strcspn(input, "\n")] = '\0';
+                if (isQuitInput(input)) {
+                    printf("取消添加管理员...\n");
+                    break;
+                }
+                strncpy(newa.username, input, sizeof(newa.username)-1);
+
+                // 输入密码（支持取消）
+                printf("输入新管理员密码 (输入q/Q取消): ");
+                read_password(input, sizeof(input));  // 复用现有密码输入函数
+                if (isQuitInput(input)) {
+                    printf("取消添加管理员...\n");
+                    break;
+                }
+                strncpy(newa.password, input, sizeof(newa.password)-1);
+
+                // 输入类型（支持取消）
+                printf("类型 (1=全局, 0=普通, 输入q/Q取消): ");
+                if (fgets(input, sizeof(input), stdin) == NULL) {
+                    printf("输入错误，取消添加...\n");
+                    clearInputBuffer();
+                    break;
+                }
+                input[strcspn(input, "\n")] = '\0';
+                if (isQuitInput(input)) {
+                    printf("取消添加管理员...\n");
+                    break;
+                }
+                newa.is_super = atoi(input);
+
+                // 确认添加
+                admins[*count] = newa;
+                (*count)++;
+                save_admin_accounts(admins, *count);
+                printf("添加成功。\n");
+                break;
+            }
+            case 3: {
+                char uname[32];
+                printf("输入要删除的管理员用户名 (输入q/Q取消): ");
+                if (fgets(uname, sizeof(uname), stdin) == NULL) {
+                    printf("输入错误，取消删除...\n");
+                    clearInputBuffer();
+                    break;
+                }
+                uname[strcspn(uname, "\n")] = '\0';
+                if (isQuitInput(uname)) {
+                    printf("取消删除管理员...\n");
+                    break;
+                }
+
+                int found = -1;
+                for (int i = 0; i < *count; i++) {
+                    if (strcmp(admins[i].username, uname) == 0) { found = i; break; }
+                }
+                if (found == -1) { printf("未找到该管理员。\n"); break; }
+
+                // 二次确认（防止误操作）
+                printf("确定要删除管理员 %s 吗？(y=确认, 其他=取消): ", uname);
+                char confirm[8];
+                fgets(confirm, sizeof(confirm), stdin);
+                confirm[strcspn(confirm, "\n")] = '\0';
+                if (strcmp(confirm, "y") != 0 && strcmp(confirm, "Y") != 0) {
+                    printf("已取消删除...\n");
+                    break;
+                }
+
+                // 执行删除
+                for (int i = found; i < *count-1; i++) admins[i] = admins[i+1];
+                (*count)--;
+                save_admin_accounts(admins, *count);
+                printf("删除成功。\n");
+                break;
+            }
+            case 4: {
+                char uname2[32];
+                printf("输入要修改密码的管理员用户名 (输入q/Q取消): ");
+                if (fgets(uname2, sizeof(uname2), stdin) == NULL) {
+                    printf("输入错误，取消修改...\n");
+                    clearInputBuffer();
+                    break;
+                }
+                uname2[strcspn(uname2, "\n")] = '\0';
+                if (isQuitInput(uname2)) {
+                    printf("取消修改密码...\n");
+                    break;
+                }
+
+                int found2 = -1;
+                for (int i = 0; i < *count; i++) {
+                    if (strcmp(admins[i].username, uname2) == 0) { found2 = i; break; }
+                }
+                if (found2 == -1) { printf("未找到该管理员。\n"); break; }
+
+                // 输入新密码（支持取消）
+                printf("输入新密码 (输入q/Q取消): ");
+                char newPwd[32];
+                read_password(newPwd, sizeof(newPwd));
+                if (isQuitInput(newPwd)) {
+                    printf("取消修改密码...\n");
+                    break;
+                }
+                strncpy(admins[found2].password, newPwd, sizeof(admins[found2].password)-1);
+
+                save_admin_accounts(admins, *count);
+                printf("密码修改成功。\n");
+                break;
+            }
+            default:
+                printf("无效选项。\n");
+                break;
+        }
+    }
 }
 
 /*以下为对套餐信息的录入和修改*/
@@ -272,90 +369,190 @@ void list_packages(Package pkgs[], int count) {
 }
 // 添加新套餐
 void add_package(Package pkgs[], int *count) {
-	if (*count >= MAX_PACKAGES) {
-		printf("已达到最大套餐数 %d，无法添加。\n", MAX_PACKAGES);
-		return;
-	}
-	Package *p = &pkgs[*count];
-	p->id = (*count == 0) ? 1 : (pkgs[*count - 1].id + 1);
-	printf("输入套餐名称: ");
-	fgets(p->name, sizeof(p->name), stdin);
-	p->name[strcspn(p->name, "\n")] = '\0';
-	printf("月资费(元): ");
-	scanf("%lf", &p->monthly_fee);
-	printf("每月流量(MB): ");
-	scanf("%d", &p->data_mb);
-	printf("语音分钟数: ");
-	scanf("%d", &p->voice_minutes);
-	printf("短信条数: ");
-	scanf("%d", &p->sms);
-	printf("合约月数(0表示无合约): ");
-	scanf("%d", &p->contract_months);
-	getchar();
-	printf("生效日期 (YYYY-MM-DD): ");
-	fgets(p->start_date, sizeof(p->start_date), stdin);
-	p->start_date[strcspn(p->start_date, "\n")] = '\0';
-	printf("终止日期 (YYYY-MM-DD, 可空): ");
-	fgets(p->end_date, sizeof(p->end_date), stdin);
-	p->end_date[strcspn(p->end_date, "\n")] = '\0';
-	printf("是否启用 (1=是,0=否): ");
-	scanf("%d", &p->is_active);
-	getchar();
-	printf("备注: ");
-	fgets(p->description, sizeof(p->description), stdin);
-	p->description[strcspn(p->description, "\n")] = '\0';
-
-	(*count)++;
-	save_packages(pkgs, *count);
-	printf("添加成功（ID=%d）。\n", p->id);
-}
-// 修改套餐
-// void modify_package(Package pkgs[], int count) {
-// 	if (count == 0) {
-// 		printf("没有套餐可供修改。\n");
-// 		return;
-// 	}
-// 	int id;
-// 	printf("输入要修改的套餐 ID: ");
-// 	scanf("%d", &id); getchar();
-// 	int found = -1;
-// 	for (int i = 0; i < count; i++) if (pkgs[i].id == id) { found = i; break; }
-// 	if (found == -1) {
-// 		printf("未找到 ID=%d 的套餐。\n", id);
-// 		return;
-// 	}
-// 	Package *p = &pkgs[found];
-// 	printf("当前名称: %s\n输入新名称(回车保持不变): ", p->name);
-// 	char buf[128];
-// 	fgets(buf, sizeof(buf), stdin);
-// 	if (buf[0] != '\n') { buf[strcspn(buf, "\n")]='\0'; strncpy(p->name, buf, sizeof(p->name)); }
-// 	printf("当前月资费: %.2f\n输入新资费(0保持不变): ", p->monthly_fee);
-// 	double d; scanf("%lf", &d); if (d > 0) p->monthly_fee = d; getchar();
-// 	save_packages(pkgs, count);
-// 	printf("修改保存。\n");
-// }
-
-// 修改或删除套餐（整合功能）
-void modify_package(Package pkgs[], int count) {
-    if (count == 0) {
-        printf("没有套餐可供操作。\n");
+    if (*count >= MAX_PACKAGES) {
+        printf("已达到最大套餐数 %d，无法添加。\n", MAX_PACKAGES);
         return;
     }
 
-    // 1. 先显示所有套餐，方便管理员选择
-    list_packages(pkgs, count);
+    Package tempPkg;  // 临时存储，避免中途取消污染原数组
+    tempPkg.id = (*count == 0) ? 1 : (pkgs[*count - 1].id + 1);
+    char input[256];  // 通用输入缓冲区
 
-    // 2. 输入要操作的套餐ID
-    int id;
-    printf("\n请输入要操作的套餐 ID: ");
-    if (scanf("%d", &id) != 1) {
-        printf("输入格式错误！\n");
+    // 输入套餐名称（支持取消）
+    printf("输入套餐名称 (输入q/Q取消添加): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，取消添加...\n");
         clearInputBuffer();
         return;
     }
-    clearInputBuffer();
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("取消添加套餐...\n");
+        return;
+    }
+    strncpy(tempPkg.name, input, sizeof(tempPkg.name)-1);
 
-    // 3. 查找套餐
+    // 输入月资费（支持取消）
+    printf("月资费(元) (输入q/Q取消添加): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，取消添加...\n");
+        clearInputBuffer();
+        return;
+    }
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("取消添加套餐...\n");
+        return;
+    }
+    tempPkg.monthly_fee = atof(input);
+
+    // 输入每月流量（支持取消）
+    printf("每月流量(MB) (输入q/Q取消添加): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，取消添加...\n");
+        clearInputBuffer();
+        return;
+    }
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("取消添加套餐...\n");
+        return;
+    }
+    tempPkg.data_mb = atoi(input);
+
+    // 输入语音分钟数（支持取消）
+    printf("语音分钟数 (输入q/Q取消添加): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，取消添加...\n");
+        clearInputBuffer();
+        return;
+    }
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("取消添加套餐...\n");
+        return;
+    }
+    tempPkg.voice_minutes = atoi(input);
+
+    // 输入短信条数（支持取消）
+    printf("短信条数 (输入q/Q取消添加): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，取消添加...\n");
+        clearInputBuffer();
+        return;
+    }
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("取消添加套餐...\n");
+        return;
+    }
+    tempPkg.sms = atoi(input);
+
+    // 输入合约月数（支持取消）
+    printf("合约月数(0表示无合约) (输入q/Q取消添加): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，取消添加...\n");
+        clearInputBuffer();
+        return;
+    }
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("取消添加套餐...\n");
+        return;
+    }
+    tempPkg.contract_months = atoi(input);
+
+    // 输入生效日期（支持取消）
+    printf("生效日期 (YYYY-MM-DD) (输入q/Q取消添加): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，取消添加...\n");
+        clearInputBuffer();
+        return;
+    }
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("取消添加套餐...\n");
+        return;
+    }
+    strncpy(tempPkg.start_date, input, sizeof(tempPkg.start_date)-1);
+
+    // 输入终止日期（支持取消）
+    printf("终止日期 (YYYY-MM-DD, 可空) (输入q/Q取消添加): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，取消添加...\n");
+        clearInputBuffer();
+        return;
+    }
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("取消添加套餐...\n");
+        return;
+    }
+    strncpy(tempPkg.end_date, input, sizeof(tempPkg.end_date)-1);
+
+    // 输入是否启用（支持取消）
+    printf("是否启用 (1=是,0=否) (输入q/Q取消添加): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，取消添加...\n");
+        clearInputBuffer();
+        return;
+    }
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("取消添加套餐...\n");
+        return;
+    }
+    tempPkg.is_active = atoi(input);
+
+    // 输入备注（支持取消）
+    printf("备注 (输入q/Q取消添加): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，取消添加...\n");
+        clearInputBuffer();
+        return;
+    }
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("取消添加套餐...\n");
+        return;
+    }
+    strncpy(tempPkg.description, input, sizeof(tempPkg.description)-1);
+
+    // 所有输入完成，确认添加
+    pkgs[*count] = tempPkg;
+    (*count)++;
+    save_packages(pkgs, *count);
+    printf("添加成功（ID=%d）。\n", tempPkg.id);
+}
+// 修改或删除套餐
+void modify_package(Package pkgs[], int count) {
+    if (count == 0) {
+        printf("没有套餐可供修改。\n");
+        return;
+    }
+
+    char input[64];
+    int id;
+
+    // 输入要修改的套餐ID（支持取消）
+    printf("输入要修改的套餐 ID (输入q/Q返回上一级): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，返回上一级...\n");
+        clearInputBuffer();
+        return;
+    }
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("返回上一级菜单...\n");
+        return;
+    }
+    id = atoi(input);
+    if (id <= 0) {
+        printf("无效的套餐ID！\n");
+        return;
+    }
+
+    // 查找套餐
     int found = -1;
     for (int i = 0; i < count; i++) {
         if (pkgs[i].id == id) {
@@ -368,83 +565,156 @@ void modify_package(Package pkgs[], int count) {
         return;
     }
 
-    // 4. 显示当前套餐信息，供参考
     Package *p = &pkgs[found];
     printf("\n当前套餐信息：\n");
-    printf("ID: %d\n", p->id);
-    printf("名称: %s\n", p->name);
-    printf("月资费: %.2f元\n", p->monthly_fee);
-    printf("每月流量: %dMB\n", p->data_mb);
-    printf("语音分钟数: %d\n", p->voice_minutes);
-    printf("短信条数: %d\n", p->sms);
-    printf("合约月数: %d\n", p->contract_months);
-    printf("生效日期: %s\n", p->start_date);
-    printf("终止日期: %s\n", p->end_date);
-    printf("是否启用: %d（1=是，0=否）\n", p->is_active);
-    printf("备注: %s\n", p->description);
+    printf("ID: %d\n名称: %s\n月资费: %.2f元\n每月流量: %dMB\n"
+           "语音分钟数: %d\n短信条数: %d\n合约月数: %d\n"
+           "生效日期: %s\n终止日期: %s\n是否启用: %d（1=是，0=否）\n备注: %s\n",
+           p->id, p->name, p->monthly_fee, p->data_mb, p->voice_minutes,
+           p->sms, p->contract_months, p->start_date, p->end_date,
+           p->is_active, p->description);
 
-    // 5. 选择操作（修改/删除）
-    int op;
-    printf("\n请选择操作：1-修改  2-删除  （输入数字）: ");
-    if (scanf("%d", &op) != 1 || (op != 1 && op != 2)) {
-        printf("无效操作！\n");
+    // 选择操作（修改/删除，支持取消）
+    printf("\n请选择操作：1-修改  2-删除  (输入q/Q返回上一级): ");
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        printf("输入错误，返回上一级...\n");
         clearInputBuffer();
         return;
     }
-    clearInputBuffer();
+    input[strcspn(input, "\n")] = '\0';
+    if (isQuitInput(input)) {
+        printf("返回上一级菜单...\n");
+        return;
+    }
+    int op = atoi(input);
+    if (op != 1 && op != 2) {
+        printf("无效操作！\n");
+        return;
+    }
 
-    if (op == 1) {
-        // 6. 执行修改（覆盖所有字段）
-        printf("\n===== 开始修改套餐 =====");
-        printf("\n输入新名称（原：%s）: ", p->name);
-        fgets(p->name, sizeof(p->name), stdin);
-        p->name[strcspn(p->name, "\n")] = '\0';  // 去除换行符
+    if (op == 1) {  // 修改套餐
+        printf("\n===== 开始修改套餐（输入q/Q可跳过当前项保留原值）=====\n");
 
+        // 修改名称
+        printf("输入新名称（原：%s）: ", p->name);
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("输入错误，保留原名称...\n");
+        } else {
+            input[strcspn(input, "\n")] = '\0';
+            if (!isQuitInput(input) && strlen(input) > 0) {  // 非退出且非空才更新
+                strncpy(p->name, input, sizeof(p->name)-1);
+            }
+        }
+
+        // 修改月资费
         printf("输入新月资费（元，原：%.2f）: ", p->monthly_fee);
-        scanf("%lf", &p->monthly_fee);
-        clearInputBuffer();
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("输入错误，保留原资费...\n");
+        } else {
+            input[strcspn(input, "\n")] = '\0';
+            if (!isQuitInput(input) && strlen(input) > 0) {
+                p->monthly_fee = atof(input);
+            }
+        }
 
+        // 其他字段（流量、语音、短信等）采用相同逻辑，支持q/Q跳过
         printf("输入新每月流量（MB，原：%d）: ", p->data_mb);
-        scanf("%d", &p->data_mb);
-        clearInputBuffer();
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("输入错误，保留原流量...\n");
+        } else {
+            input[strcspn(input, "\n")] = '\0';
+            if (!isQuitInput(input) && strlen(input) > 0) {
+                p->data_mb = atoi(input);
+            }
+        }
 
         printf("输入新语音分钟数（原：%d）: ", p->voice_minutes);
-        scanf("%d", &p->voice_minutes);
-        clearInputBuffer();
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("输入错误，保留原语音分钟数...\n");
+        } else {
+            input[strcspn(input, "\n")] = '\0';
+            if (!isQuitInput(input) && strlen(input) > 0) {
+                p->voice_minutes = atoi(input);
+            }
+        }
 
         printf("输入新短信条数（原：%d）: ", p->sms);
-        scanf("%d", &p->sms);
-        clearInputBuffer();
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("输入错误，保留原短信条数...\n");
+        } else {
+            input[strcspn(input, "\n")] = '\0';
+            if (!isQuitInput(input) && strlen(input) > 0) {
+                p->sms = atoi(input);
+            }
+        }
 
         printf("输入新合约月数（0表示无合约，原：%d）: ", p->contract_months);
-        scanf("%d", &p->contract_months);
-        clearInputBuffer();
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("输入错误，保留原合约月数...\n");
+        } else {
+            input[strcspn(input, "\n")] = '\0';
+            if (!isQuitInput(input) && strlen(input) > 0) {
+                p->contract_months = atoi(input);
+            }
+        }
 
         printf("输入新生效日期（YYYY-MM-DD，原：%s）: ", p->start_date);
-        fgets(p->start_date, sizeof(p->start_date), stdin);
-        p->start_date[strcspn(p->start_date, "\n")] = '\0';
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("输入错误，保留原生效日期...\n");
+        } else {
+            input[strcspn(input, "\n")] = '\0';
+            if (!isQuitInput(input) && strlen(input) > 0) {
+                strncpy(p->start_date, input, sizeof(p->start_date)-1);
+            }
+        }
 
         printf("输入新终止日期（YYYY-MM-DD，原：%s）: ", p->end_date);
-        fgets(p->end_date, sizeof(p->end_date), stdin);
-        p->end_date[strcspn(p->end_date, "\n")] = '\0';
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("输入错误，保留原终止日期...\n");
+        } else {
+            input[strcspn(input, "\n")] = '\0';
+            if (!isQuitInput(input) && strlen(input) > 0) {
+                strncpy(p->end_date, input, sizeof(p->end_date)-1);
+            }
+        }
 
         printf("是否启用（1=是，0=否，原：%d）: ", p->is_active);
-        scanf("%d", &p->is_active);
-        clearInputBuffer();
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("输入错误，保留原状态...\n");
+        } else {
+            input[strcspn(input, "\n")] = '\0';
+            if (!isQuitInput(input) && strlen(input) > 0) {
+                p->is_active = atoi(input);
+            }
+        }
 
         printf("输入新备注（原：%s）: ", p->description);
-        fgets(p->description, sizeof(p->description), stdin);
-        p->description[strcspn(p->description, "\n")] = '\0';
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("输入错误，保留原备注...\n");
+        } else {
+            input[strcspn(input, "\n")] = '\0';
+            if (!isQuitInput(input) && strlen(input) > 0) {
+                strncpy(p->description, input, sizeof(p->description)-1);
+            }
+        }
 
         save_packages(pkgs, count);
         printf("套餐修改成功！\n");
-    } else {
-        // 7. 执行删除（将后续套餐前移，覆盖当前位置）
-        for (int i = found; i < count - 1; i++) {
-            pkgs[i] = pkgs[i + 1];  // 数组元素前移
+    } else {  // 删除套餐（支持二次确认）
+        printf("确定要删除ID为 %d 的套餐吗？(y=确认, 其他=取消): ", id);
+        char confirm[8];
+        fgets(confirm, sizeof(confirm), stdin);
+        confirm[strcspn(confirm, "\n")] = '\0';
+        if (strcmp(confirm, "y") != 0 && strcmp(confirm, "Y") != 0) {
+            printf("已取消删除...\n");
+            return;
         }
-        // 更新全局套餐数量（注意：这里需要修改外部变量pkgCount）
-        pkgCount--;  // 因为count是传参的副本，需直接操作全局变量
+
+        // 执行删除
+        for (int i = found; i < count - 1; i++) {
+            pkgs[i] = pkgs[i + 1];
+        }
+        pkgCount--;
         save_packages(pkgs, pkgCount);
         printf("套餐 ID=%d 已删除！\n", id);
     }

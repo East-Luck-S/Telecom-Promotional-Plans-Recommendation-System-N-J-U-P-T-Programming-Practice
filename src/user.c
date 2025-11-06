@@ -17,8 +17,6 @@ typedef struct {
 } Demand;
 static Demand userDemand = {0, 0, 0, 0};  //全局需求变量
 
-float userPkgMatrix[100][50] = {0}; //用户-套餐交互矩阵（记录用户对套餐的行为评分，1-5分），行：用户索引，列：套餐索引，值：评分（0表示无交互）
-
 //判断字符串是否为空（全空格或空）
 int isStrEmpty(const char* str) {
     if (!str) return 1;
@@ -306,7 +304,7 @@ int userRegister() {
     //输入并校验用户ID
     while (1) {
         printf("\n===== 用户注册(输入q/Q可取消注册) =====");
-        printf("\n请输入用户ID（1-20位，字母/数字）：");
+        printf("\n请输入用户ID（3-20位，字母/数字）：");
         
         if (scanf("%19s", input) != 1) {
             printf("[错误] 输入格式错误，请重新输入！\n");
@@ -322,8 +320,8 @@ int userRegister() {
         }
        
         int idLen = strlen(input);
-        if (idLen < 1 || idLen > 20) {
-            printf("[错误] 用户ID长度需在1-20位之间！\n");
+        if (idLen < 3 || idLen > 20) {
+            printf("[错误] 用户ID长度需在3-20位之间！\n");
             continue;
         }
 
@@ -414,7 +412,7 @@ int userRegister() {
     }
 
     //初始化其他字段
-    newUser.selectedPkg[0] = '0';  //未选套餐
+    newUser.selectedPkg[0] = '\0';  //未选套餐
     newUser.useYears = 0;           //使用年限0
     newUser.totalCost = 0.0;        //累计消费0
     newUser.userStar = 1;           //初始星级1星
@@ -588,7 +586,7 @@ void recommendPackages() {
     }
 
     // 区分“有套餐用户”和“无套餐用户”
-    if (strcmp(currentUser->selectedPkg, "0") == 0) {
+    if (strlen(currentUser->selectedPkg) == 0) {
         recommendForNewUser();  //新用户推荐
     } else {
         itemBasedCFRecommendation();  //老用户：基于已选套餐的相似推荐
@@ -649,7 +647,7 @@ void recommendForNewUser() {
         printf("[错误] 请先登录系统！\n");
         return;
     }
-    if (strcmp(currentUser->selectedPkg, "0") != 0) {
+    if (strlen(currentUser->selectedPkg) > 0) {
         printf("[提示] 该用户已选择套餐，使用常规相似套餐推荐！\n");
         itemBasedCFRecommendation();  //调用原有基于物品的推荐
         return;
@@ -663,10 +661,6 @@ void recommendForNewUser() {
             showMatchedPackages();
             return;
         }
-    }
-    else {
-        printf("[提示] 用户未填写需求调查，无法基于需求推荐套餐！\n");
-        return;
     }
     showMatchedPackages();
 }
@@ -703,18 +697,11 @@ static float calcPackageSimilarity(const Package* pkgA, const Package* pkgB) {
     return dotProduct / (sqrt(normA) * sqrt(normB));
 }
 
-//获取用户对套餐的评分（从交互矩阵中）
-static float getUserRatingForPackage(int userIndex, int pkgIndex) {
-    if (userIndex < 0 || userIndex >= totalUsers) return 0.0f;
-    if (pkgIndex < 0 || pkgIndex >= pkgCount) return 0.0f;
-    return userPkgMatrix[userIndex][pkgIndex];
-}
-
 //针对已选择套餐用户的推荐函数
 void itemBasedCFRecommendation() {
     matchedPkgCount = 0;  // 重置推荐结果
 
-    //前置检查
+    // 前置检查
     if (currentUser == NULL) {
         printf("[错误] 请先登录系统！\n");
         return;
@@ -724,116 +711,90 @@ void itemBasedCFRecommendation() {
         return;
     }
 
-    //找到当前用户有交互的套餐（评分>0的套餐）
-    int userIndex = -1;
-    for (int i = 0; i < totalUsers; i++) {
-        if (strcmp(userList[i].userId, currentUser->userId) == 0) {
-            userIndex = i;
-            break;
-        }
-    }
-    if (userIndex == -1) {
-        printf("[错误] 用户数据不存在！\n");
+    // 检查用户是否已选择套餐（无已选套餐则无法推荐）
+    if (strlen(currentUser->selectedPkg) == 0) {
+        printf("[提示] 请先选择套餐，再获取相似推荐！\n");
         return;
     }
 
-    //收集用户已交互的套餐及评分
-    typedef struct {
-        int pkgIndex;
-        float rating;
-    } UserInteraction;
-    UserInteraction interactions[10] = {0};  // 最多10个交互套餐
-    int interactionCount = 0;
-
+    // 找到用户已选套餐在套餐列表中的索引
+    int selectedPkgIndex = -1;
+    int selectedPkgId = atoi(currentUser->selectedPkg);
     for (int i = 0; i < pkgCount; i++) {
-        float rating = getUserRatingForPackage(userIndex, i);
-        if (rating > 0) {
-            interactions[interactionCount].pkgIndex = i;
-            interactions[interactionCount].rating = rating;
-            interactionCount++;
+        if (packageList[i].id == selectedPkgId) {
+            selectedPkgIndex = i;
+            break;
+        }
+    }
+    if (selectedPkgIndex == -1) {
+        printf("[错误] 已选套餐数据不存在！\n");
+        return;
+    }
+
+    // 定义结构体存储套餐ID和对应的相似度
+    typedef struct {
+        Package pkg;       // 套餐信息
+        float similarity;  // 与已选套餐的相似度
+    } PkgWithSimilarity;
+
+    PkgWithSimilarity similarPkgs[50] = {0};  // 存储相似套餐
+    int similarCount = 0;                     // 相似套餐数量
+
+    // 计算已选套餐与所有其他套餐的相似度
+    for (int i = 0; i < pkgCount; i++) {
+        // 跳过已选套餐本身
+        if (i == selectedPkgIndex) {
+            continue;
+        }
+
+        // 计算相似度（复用原有相似度计算函数）
+        float sim = calcPackageSimilarity(&packageList[selectedPkgIndex], &packageList[i]);
+        
+        // 只保留正相似度的套餐
+        if (sim > 0) {
+            similarPkgs[similarCount].pkg = packageList[i];
+            similarPkgs[similarCount].similarity = sim;
+            similarCount++;
         }
     }
 
-    //如果用户无交互历史，基于已选套餐推荐（若有）
-    if (interactionCount == 0) {
-        if (strlen(currentUser->selectedPkg) == 0) {
-            printf("[提示] 暂无用户交互数据，无法推荐相似套餐！\n");
-            return;
-        }
-        // 将已选套餐作为唯一交互项
-        int selectedPkgId = atoi(currentUser->selectedPkg);
-        for (int i = 0; i < pkgCount; i++) {
-            if (packageList[i].id == selectedPkgId) {
-                interactions[0].pkgIndex = i;
-                interactions[0].rating = 4.0f;  // 假设对已选套餐评分4分
-                interactionCount = 1;
-                break;
+    // 检查是否有相似套餐
+    if (similarCount == 0) {
+        printf("[提示] 未找到与已选套餐相似的套餐！\n");
+        return;
+    }
+
+    // 按相似度从高到低排序
+    for (int i = 0; i < similarCount - 1; i++) {
+        for (int j = 0; j < similarCount - i - 1; j++) {
+            if (similarPkgs[j].similarity < similarPkgs[j + 1].similarity) {
+                // 交换位置
+                PkgWithSimilarity temp = similarPkgs[j];
+                similarPkgs[j] = similarPkgs[j + 1];
+                similarPkgs[j + 1] = temp;
             }
         }
     }
 
-    //计算待推荐套餐的得分
-    float pkgScores[50] = {0};  // 套餐推荐得分
-    float similaritySums[50] = {0};  // 相似度总和（用于归一化）
-
-    for (int i = 0; i < interactionCount; i++) {
-        int srcPkgIndex = interactions[i].pkgIndex;  // 用户交互过的套餐
-        float userRating = interactions[i].rating;   // 用户对该套餐的评分
-
-        //计算该套餐与其他所有套餐的相似度
-        for (int j = 0; j < pkgCount; j++) {
-            if (j == srcPkgIndex) continue;  // 跳过自身
-
-            float sim = calcPackageSimilarity(&packageList[srcPkgIndex], &packageList[j]);
-            if (sim <= 0) continue;  // 只考虑正相似
-
-            // 得分 = 相似度 * 用户评分（累加）
-            pkgScores[j] += sim * userRating;
-            similaritySums[j] += sim;  // 累计相似度
+    // 筛选相似度阈值
+    float similarityThreshold = 0.3f;
+    for (int i = 0; i < similarCount; i++) {
+        if (similarPkgs[i].similarity >= similarityThreshold) {
+            matchedPackages[matchedPkgCount++] = similarPkgs[i].pkg;
         }
     }
 
-    //归一化得分并筛选推荐结果（排除用户已交互的套餐）
-    for (int j = 0; j < pkgCount; j++) {
-        // 跳过用户已交互的套餐
-        int isInteracted = 0;
-        for (int i = 0; i < interactionCount; i++) {
-            if (j == interactions[i].pkgIndex) {
-                isInteracted = 1;
-                break;
-            }
-        }
-        if (isInteracted) continue;
-
-        // 归一化得分（除以相似度总和）
-        if (similaritySums[j] > 0) {
-            float finalScore = pkgScores[j] / similaritySums[j];
-            if (finalScore >= 2.5f) {  // 得分阈值（可调整）
-                matchedPackages[matchedPkgCount++] = packageList[j];
-            }
-        }
+    // 检查筛选后是否有推荐结果
+    if (matchedPkgCount == 0) {
+        printf("[提示] 未找到符合相似度要求的推荐套餐！\n");
+        return;
     }
 
-    //按得分排序推荐结果（从高到低）
-    for (int i = 0; i < matchedPkgCount - 1; i++) {
-        for (int j = 0; j < matchedPkgCount - i - 1; j++) {
-            // 重新计算临时得分用于排序
-            float scoreJ = 0, scoreJ1 = 0;
-            for (int k = 0; k < interactionCount; k++) {
-                int srcIdx = interactions[k].pkgIndex;
-                scoreJ += calcPackageSimilarity(&packageList[srcIdx], &matchedPackages[j]) * interactions[k].rating;
-                scoreJ1 += calcPackageSimilarity(&packageList[srcIdx], &matchedPackages[j+1]) * interactions[k].rating;
-            }
-            if (scoreJ < scoreJ1) {
-                Package temp = matchedPackages[j];
-                matchedPackages[j] = matchedPackages[j+1];
-                matchedPackages[j+1] = temp;
-            }
-        }
-    }
-
+    // 输出推荐结果
     printf("\n===== 基于套餐相似性的推荐结果 =====\n");
-    showMatchedPackages();  // 复用原显示函数
+    printf("（基准套餐：%s，相似度阈值：%.1f）\n", 
+           packageList[selectedPkgIndex].name, similarityThreshold);
+    showMatchedPackages(); 
 }
 
 //显示推荐套餐
@@ -858,68 +819,21 @@ void showMatchedPackages() {
         int start = (currentPage - 1) * pageSize;
         int end = (currentPage * pageSize < matchedPkgCount) ? currentPage * pageSize : matchedPkgCount;
 
-        // 表头
-printf("+------+----------------+------------+------------+------------+------------+\n");
-printf("|  ID  |    套餐名称     |  月费(元)  |  流量(MB)  | 通话(分钟) |  短信(条)  |\n");
-printf("+------+----------------+------------+------------+------------+------------+\n");
-
-// 数据行循环
-for (int i = start; i < end; i++) {
-    const Package* pkg = &matchedPackages[i];
-    char buf[32];
-    int len, pad, left, right;
-
-    // ID 居中
-    sprintf(buf, "%d", pkg->id);
-    len = strlen(buf); pad = 6 - len; left = pad/2; right = pad - left;
-    printf("|");
-    for (int s=0; s<left; s++) printf(" ");
-    printf("%s", buf);
-    for (int s=0; s<right; s++) printf(" ");
-
-    // 套餐名称居中
-    len = strlen(pkg->name); pad = 16 - len; left = pad/2; right = pad - left;
-    printf("|");
-    for (int s=0; s<left; s++) printf(" ");
-    printf("%s", pkg->name);
-    for (int s=0; s<right; s++) printf(" ");
-
-    // 月费居中
-    sprintf(buf, "%.2f", pkg->monthly_fee);
-    len = strlen(buf); pad = 12 - len; left = pad/2; right = pad - left;
-    printf("|");
-    for (int s=0; s<left; s++) printf(" ");
-    printf("%s", buf);
-    for (int s=0; s<right; s++) printf(" ");
-
-    // 流量居中
-    sprintf(buf, "%d", pkg->data_mb);
-    len = strlen(buf); pad = 12 - len; left = pad/2; right = pad - left;
-    printf("|");
-    for (int s=0; s<left; s++) printf(" ");
-    printf("%s", buf);
-    for (int s=0; s<right; s++) printf(" ");
-
-    // 通话居中
-    sprintf(buf, "%d", pkg->voice_minutes);
-    len = strlen(buf); pad = 12 - len; left = pad/2; right = pad - left;
-    printf("|");
-    for (int s=0; s<left; s++) printf(" ");
-    printf("%s", buf);
-    for (int s=0; s<right; s++) printf(" ");
-
-    // 短信居中
-    sprintf(buf, "%d", pkg->sms);
-    len = strlen(buf); pad = 12 - len; left = pad/2; right = pad - left;
-    printf("|");
-    for (int s=0; s<left; s++) printf(" ");
-    printf("%s", buf);
-    for (int s=0; s<right; s++) printf(" ");
-    printf("|\n");   // ✅ 每行最后换行
-}
-
-// 表尾
-printf("+------+----------------+------------+------------+------------+------------+\n");
+        // 打印当前页套餐
+        printf("\n===== 推荐套餐（%d星用户）- 第%d/%d页 =====\n", 
+               currentUser->userStar, currentPage, totalPages);
+        printf("+----+----------------+----------+----------+----------+----------+\n");
+        printf("| ID | 套餐名称       | 月费(元) | 流量(MB) | 通话(分钟)| 短信(条) |\n");
+        printf("+----+----------------+----------+----------+----------+----------+\n");
+        
+        for (int i = start; i < end; i++) {
+            const Package* pkg = &matchedPackages[i];
+            printf("|%2d  |%-14s  |%8.2f  |%8d  |%8d   |%6d    |\n",
+                   pkg->id, pkg->name, pkg->monthly_fee,
+                   pkg->data_mb, pkg->voice_minutes, pkg->sms);
+        }
+        
+        printf("+----+----------------+----------+----------+----------+----------+\n");
 
         // 分页控制
         if (totalPages <= 1) break;

@@ -269,6 +269,27 @@ int saveUsersToText() {
     return 1;
 }
 
+//保存用户需求到文本文件 (格式：userId,data_mb,voice_minutes,sms,valid)
+int saveDemandToText(const char* userId) {
+    FILE* fp = fopen("user_demand.txt", "a");  // 以追加模式打开文件
+    if (fp == NULL) {
+        printf("[错误] 打开需求文件失败，无法保存！\n");
+        return 0;
+    }
+
+    // 按格式：userId,data_mb,voice_minutes,sms,valid 写入文件
+    fprintf(fp, "%s,%d,%d,%d,%d\n", 
+            userId, 
+            userDemand.data_mb, 
+            userDemand.voice_minutes, 
+            userDemand.sms, 
+            userDemand.valid);
+
+    fclose(fp);
+    printf("[成功] 用户需求已保存到文件！\n");
+    return 1;
+}
+
 //用户注册函数
 int userRegister() {
     //加载已有用户数据,防止新用户被覆盖掉
@@ -516,7 +537,13 @@ void inputDemandByForm() {
     clearInputBuffer();
 
     userDemand.valid = 1;
-    printf("\n[成功] 需求调查已保存！\n");
+
+    //调用保存函数，将需求写入文本文件
+    if (saveDemandToText(currentUser->userId)) {
+        printf("需求已成功保存！\n");
+    } else {
+        printf("需求保存失败，请重试！\n");
+    }
 }
 
 //计算用户星级
@@ -836,7 +863,7 @@ void showMatchedPackages() {
         
         for (int i = start; i < end; i++) {
             const Package* pkg = &matchedPackages[i];
-            printf("| %2d | %-14s | %8.2f | %8d | %8d | %8d  |\n",
+            printf("| %2d | %-14s | %8.2f | %6d | %8d | %6d  |\n",
                    pkg->id, pkg->name, pkg->monthly_fee,
                    pkg->data_mb, pkg->voice_minutes, pkg->sms);
         }

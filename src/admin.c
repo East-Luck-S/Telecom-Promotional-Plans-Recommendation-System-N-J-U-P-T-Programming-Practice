@@ -310,30 +310,146 @@ void add_package(Package pkgs[], int *count) {
 	printf("添加成功（ID=%d）。\n", p->id);
 }
 // 修改套餐
+// void modify_package(Package pkgs[], int count) {
+// 	if (count == 0) {
+// 		printf("没有套餐可供修改。\n");
+// 		return;
+// 	}
+// 	int id;
+// 	printf("输入要修改的套餐 ID: ");
+// 	scanf("%d", &id); getchar();
+// 	int found = -1;
+// 	for (int i = 0; i < count; i++) if (pkgs[i].id == id) { found = i; break; }
+// 	if (found == -1) {
+// 		printf("未找到 ID=%d 的套餐。\n", id);
+// 		return;
+// 	}
+// 	Package *p = &pkgs[found];
+// 	printf("当前名称: %s\n输入新名称(回车保持不变): ", p->name);
+// 	char buf[128];
+// 	fgets(buf, sizeof(buf), stdin);
+// 	if (buf[0] != '\n') { buf[strcspn(buf, "\n")]='\0'; strncpy(p->name, buf, sizeof(p->name)); }
+// 	printf("当前月资费: %.2f\n输入新资费(0保持不变): ", p->monthly_fee);
+// 	double d; scanf("%lf", &d); if (d > 0) p->monthly_fee = d; getchar();
+// 	save_packages(pkgs, count);
+// 	printf("修改保存。\n");
+// }
+
+// 修改或删除套餐（整合功能）
 void modify_package(Package pkgs[], int count) {
-	if (count == 0) {
-		printf("没有套餐可供修改。\n");
-		return;
-	}
-	int id;
-	printf("输入要修改的套餐 ID: ");
-	scanf("%d", &id); getchar();
-	int found = -1;
-	for (int i = 0; i < count; i++) if (pkgs[i].id == id) { found = i; break; }
-	if (found == -1) {
-		printf("未找到 ID=%d 的套餐。\n", id);
-		return;
-	}
-	Package *p = &pkgs[found];
-	printf("当前名称: %s\n输入新名称(回车保持不变): ", p->name);
-	char buf[128];
-	fgets(buf, sizeof(buf), stdin);
-	if (buf[0] != '\n') { buf[strcspn(buf, "\n")]='\0'; strncpy(p->name, buf, sizeof(p->name)); }
-	printf("当前月资费: %.2f\n输入新资费(0保持不变): ", p->monthly_fee);
-	double d; scanf("%lf", &d); if (d > 0) p->monthly_fee = d; getchar();
-	save_packages(pkgs, count);
-	printf("修改保存。\n");
+    if (count == 0) {
+        printf("没有套餐可供操作。\n");
+        return;
+    }
+
+    // 1. 先显示所有套餐，方便管理员选择
+    list_packages(pkgs, count);
+
+    // 2. 输入要操作的套餐ID
+    int id;
+    printf("\n请输入要操作的套餐 ID: ");
+    if (scanf("%d", &id) != 1) {
+        printf("输入格式错误！\n");
+        clearInputBuffer();
+        return;
+    }
+    clearInputBuffer();
+
+    // 3. 查找套餐
+    int found = -1;
+    for (int i = 0; i < count; i++) {
+        if (pkgs[i].id == id) {
+            found = i;
+            break;
+        }
+    }
+    if (found == -1) {
+        printf("未找到ID为 %d 的套餐！\n", id);
+        return;
+    }
+
+    // 4. 显示当前套餐信息，供参考
+    Package *p = &pkgs[found];
+    printf("\n当前套餐信息：\n");
+    printf("ID: %d\n", p->id);
+    printf("名称: %s\n", p->name);
+    printf("月资费: %.2f元\n", p->monthly_fee);
+    printf("每月流量: %dMB\n", p->data_mb);
+    printf("语音分钟数: %d\n", p->voice_minutes);
+    printf("短信条数: %d\n", p->sms);
+    printf("合约月数: %d\n", p->contract_months);
+    printf("生效日期: %s\n", p->start_date);
+    printf("终止日期: %s\n", p->end_date);
+    printf("是否启用: %d（1=是，0=否）\n", p->is_active);
+    printf("备注: %s\n", p->description);
+
+    // 5. 选择操作（修改/删除）
+    int op;
+    printf("\n请选择操作：1-修改  2-删除  （输入数字）: ");
+    if (scanf("%d", &op) != 1 || (op != 1 && op != 2)) {
+        printf("无效操作！\n");
+        clearInputBuffer();
+        return;
+    }
+    clearInputBuffer();
+
+    if (op == 1) {
+        // 6. 执行修改（覆盖所有字段）
+        printf("\n===== 开始修改套餐 =====");
+        printf("\n输入新名称（原：%s）: ", p->name);
+        fgets(p->name, sizeof(p->name), stdin);
+        p->name[strcspn(p->name, "\n")] = '\0';  // 去除换行符
+
+        printf("输入新月资费（元，原：%.2f）: ", p->monthly_fee);
+        scanf("%lf", &p->monthly_fee);
+        clearInputBuffer();
+
+        printf("输入新每月流量（MB，原：%d）: ", p->data_mb);
+        scanf("%d", &p->data_mb);
+        clearInputBuffer();
+
+        printf("输入新语音分钟数（原：%d）: ", p->voice_minutes);
+        scanf("%d", &p->voice_minutes);
+        clearInputBuffer();
+
+        printf("输入新短信条数（原：%d）: ", p->sms);
+        scanf("%d", &p->sms);
+        clearInputBuffer();
+
+        printf("输入新合约月数（0表示无合约，原：%d）: ", p->contract_months);
+        scanf("%d", &p->contract_months);
+        clearInputBuffer();
+
+        printf("输入新生效日期（YYYY-MM-DD，原：%s）: ", p->start_date);
+        fgets(p->start_date, sizeof(p->start_date), stdin);
+        p->start_date[strcspn(p->start_date, "\n")] = '\0';
+
+        printf("输入新终止日期（YYYY-MM-DD，原：%s）: ", p->end_date);
+        fgets(p->end_date, sizeof(p->end_date), stdin);
+        p->end_date[strcspn(p->end_date, "\n")] = '\0';
+
+        printf("是否启用（1=是，0=否，原：%d）: ", p->is_active);
+        scanf("%d", &p->is_active);
+        clearInputBuffer();
+
+        printf("输入新备注（原：%s）: ", p->description);
+        fgets(p->description, sizeof(p->description), stdin);
+        p->description[strcspn(p->description, "\n")] = '\0';
+
+        save_packages(pkgs, count);
+        printf("套餐修改成功！\n");
+    } else {
+        // 7. 执行删除（将后续套餐前移，覆盖当前位置）
+        for (int i = found; i < count - 1; i++) {
+            pkgs[i] = pkgs[i + 1];  // 数组元素前移
+        }
+        // 更新全局套餐数量（注意：这里需要修改外部变量pkgCount）
+        pkgCount--;  // 因为count是传参的副本，需直接操作全局变量
+        save_packages(pkgs, pkgCount);
+        printf("套餐 ID=%d 已删除！\n", id);
+    }
 }
+
 
 /*以下为对用户所享受套餐政策，优惠的管理*/
 

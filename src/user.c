@@ -2,14 +2,23 @@
 #include "system.h"
 
 // 全局变量定义
-int userCount=0;              // 用户数量
 Package* packageList = NULL;
 int totalPackages = 0;
 User* userList = NULL;
 int totalUsers = 0;
 User* currentUser;
+//需求结构体
+typedef struct {
+    int data_mb;         // 流量需求(MB)
+    int voice_minutes;   // 通话需求(分钟)
+    int sms;             // 短信需求(条)
+    int valid;           // 需求有效性标记(1:有效)
+} Demand;
+static Demand userDemand = {0, 0, 0, 0};  //全局需求变量
 
-// 判断字符串是否为空（全空格或空）
+float userPkgMatrix[100][50] = {0}; //用户-套餐交互矩阵（记录用户对套餐的行为评分，1-5分），行：用户索引，列：套餐索引，值：评分（0表示无交互）
+
+//判断字符串是否为空（全空格或空）
 int isStrEmpty(const char* str) {
     if (!str) return 1;
     while (*str) {
@@ -19,217 +28,7 @@ int isStrEmpty(const char* str) {
     return 1;
 }
 
-// 工具函数：检查用户ID是否已存在
-static int isUserIdExists(const char* userId) {
-    for (int i = 0; i < totalUsers; i++) {
-        if (strcmp(userList[i].userId, userId) == 0) {
-            return 1; // 存在
-        }
-    }
-    return 0; // 不存在
-}
-
-// 新增：检查输入是否为回退指令（q/Q）
-static int isQuitInput(const char* input) {
-    return (strcmp(input, "q") == 0 || strcmp(input, "Q") == 0);
-}
-
-// 用户注册函数
-int userRegister() {
-    // 1. 加载已有用户数据,防止新用户被覆盖掉
-    if (!loadUsersFromText()) {
-        printf("[错误] 加载用户数据失败，无法注册！\n");
-        return 0;
-    }
-
-    // 3. 定义新用户变量
-    char input[20];
-    User newUser = {0};
-    char password1[20], password2[20];
-
-    // 4. 输入并校验用户ID
-    while (1) {
-        printf("\n===== 用户注册(输入q/Q可取消注册) =====");
-        printf("\n请输入用户ID（3-20位，字母/数字）：");
-        
-        if (scanf("%19s", input) != 1) {
-            printf("[错误] 输入格式错误，请重新输入！\n");
-            clearInputBuffer();
-            continue;
-        }
-        clearInputBuffer();
-
-        // 新增回退判断
-        if (isQuitInput(input)) {
-            printf("[提示] 已取消注册流程！\n");
-            return 0;
-        }
-       
-        int idLen = strlen(input);
-        if (idLen < 3 || idLen > 20) {
-            printf("[错误] 用户ID长度需在3-20位之间！\n");
-            continue;
-        }
-
-        int valid = 1;
-        for (int i = 0; i < idLen; i++) {
-            if (!isalnum((unsigned char)input[i])) {
-                valid = 0;
-                break;
-            }
-        }
-        if (!valid) {
-            printf("[错误] 用户ID只能包含字母和数字！\n");
-            continue;
-        }
-
-        if (isUserIdExists(input)) {
-            printf("[错误] 该用户ID已被注册，请更换！\n");
-            continue;
-        }
-
-        // 确认用户ID有效，保存到新用户信息
-        strcpy(newUser.userId, input);
-
-        break;
-    }
-
-    // 5. 输入并校验密码
-    while (1) {
-        printf("请设置密码（3-16位,输入q/Q可取消注册）：");
-        if (scanf("%19s", input) != 1) {
-            printf("[错误] 输入格式错误，请重新输入！\n");
-            clearInputBuffer();
-            continue;
-        }
-        clearInputBuffer();
-
-        // 检查是否回退
-        if (isQuitInput(input)) {
-            printf("[提示] 已取消注册流程！\n");
-            return 0;
-        }
-
-        if (strlen(input) < 3 || strlen(input) > 16) {
-            printf("[错误] 密码长度需在3-16位之间！\n");
-            continue;
-        }
-
-        strcpy(password1, input); // 保存第一次输入的密码
-
-        printf("请确认密码（输入q/Q可取消注册）：");
-        if (scanf("%19s", input) != 1) {
-            printf("[错误] 输入格式错误，请重新输入！\n");
-            clearInputBuffer();
-            continue;
-        }
-        clearInputBuffer();
-
-         // 检查确认密码时是否回退
-        if (isQuitInput(input)) {
-            printf("[提示] 已取消注册流程！\n");
-            return 0;
-        }
-        strcpy(password2, input);
-
-        if (strcmp(password1, password2) != 0) {
-            printf("[错误] 两次输入的密码不一致！\n");
-            continue;
-        }
-
-        strcpy(newUser.userPwd, password1);
-        break;
-    }
-
-    // 6. 输入用户名（支持回退）
-    printf("请输入用户名（输入q/Q可取消）：");
-    if (scanf("%19s", input) != 1) {
-        printf("[错误] 输入格式错误，使用默认用户名！\n");
-        strcpy(newUser.userName, "默认用户");
-    } else {
-        clearInputBuffer();
-        // 检查是否回退
-        if (isQuitInput(input)) {
-            printf("[提示] 已取消注册流程！\n");
-            return 0;
-        }
-        strcpy(newUser.userName, input);
-    }
-
-    // 7. 初始化其他字段
-    newUser.selectedPkg[0] = '\0';  // 未选套餐
-    newUser.useYears = 0;           // 使用年限0
-    newUser.totalCost = 0.0;        // 累计消费0
-    newUser.userStar = 1;           // 初始星级1星
-
-    // 8. 扩容用户列表并添加新用户
-    User* tempList = (User*)realloc(userList, (totalUsers + 1) * sizeof(User));
-    if (!tempList) {
-        printf("[错误] 内存分配失败，注册失败！\n");
-        return 0;
-    }
-    userList = tempList;
-    userList[totalUsers] = newUser;
-    totalUsers++;
-
-    // 9. 保存到文件
-    if (!saveUsersToText()) {
-        printf("[错误] 保存用户数据失败，但注册流程已完成！\n");
-        return 0;
-    }
-
-    printf("\n[成功] 用户注册完成！用户ID：%s，密码：%s\n", 
-           newUser.userId, newUser.userPwd);
-    return 1;
-}
-
-// 用户登录
-void loginUser() {
-   if(loadUsersFromText() != 1)
-   {
-     printf("error\n");
-     return;
-   }
-
-    char id[20], pwd[20];
-
-    printf("\n===== 用户登录 =====\n");
-    printf("请输入用户ID: ");
-    if (scanf("%19s", id) != 1) {
-        printf("[错误] 输入格式错误！\n");
-        clearInputBuffer();
-        return;
-    }
-    clearInputBuffer();
-
-    printf("请输入密码: ");
-    if (scanf("%19s", pwd) != 1) {
-        printf("[错误] 输入格式错误！\n");
-        clearInputBuffer();
-        return;
-    }
-    clearInputBuffer();
-
-    // 查找用户
-    User* user = findUser(id);
-    if (!user) {
-        printf("[错误] 用户ID不存在！\n");
-        currentUser = NULL;
-        return;
-    }
-
-    // 校验密码
-    if (strcmp(user->userPwd, pwd) == 0) {
-        currentUser = user;
-        printf("[成功] 用户 %s 登录成功！\n", currentUser->userName);
-    } else {
-        printf("[错误] 密码错误！\n");
-        currentUser = NULL;
-    }
-}
-
-
-// 去除字符串首尾空格
+//去除字符串首尾空格
 void trimStr(char* str) {
     if (!str) return;
     // 去除开头空格
@@ -243,7 +42,39 @@ void trimStr(char* str) {
     str[end - start + 1] = '\0';
 }
 
-// 从文本文件加载套餐（格式：id,name,monthly_fee,data_mb,voice_minutes,sms,contract_months,start_date,end_date,is_active,description）
+//检查用户ID是否已存在
+static int isUserIdExists(const char* userId) {
+    for (int i = 0; i < totalUsers; i++) {
+        if (strcmp(userList[i].userId, userId) == 0) {
+            return 1; // 存在
+        }
+    }
+    return 0; // 不存在
+}
+
+//检查输入是否为回退指令（q/Q）
+static int isQuitInput(const char* input) {
+    return (strcmp(input, "q") == 0 || strcmp(input, "Q") == 0);
+}
+
+//查找用户（返回指针，未找到返回NULL）
+User* findUser(const char* userId) {
+    for (int i = 0; i < totalUsers; i++) {
+        if (strcmp(userList[i].userId, userId) == 0) {
+            return &userList[i];
+        }
+    }
+    return NULL;
+}
+
+//交换套餐（排序用）
+static void swapPackages(Package* a, Package* b) {
+    Package temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+//从文本文件加载套餐（格式：id,name,monthly_fee,data_mb,voice_minutes,sms,contract_months,start_date,end_date,is_active,description）
 int loadPackagesFromText() {
     // 释放旧数据
     if (packageList) {
@@ -324,7 +155,7 @@ int loadPackagesFromText() {
     return 1;
 }
 
-// 保存套餐到文本文件
+//保存套餐到文本文件
 int savePackagesToText() {
     FILE* fp = fopen(PKG_FILE, "w");
     if (!fp) return 0;
@@ -348,7 +179,7 @@ int savePackagesToText() {
     return 1;
 }
 
-// 从文本文件加载用户（格式：userId,userPwd,userName,selectedPkg,useYears,totalCost,userStar）
+//从文本文件加载用户（格式：userId,userPwd,userName,selectedPkg,useYears,totalCost,userStar）
 int loadUsersFromText() {
     // 释放旧数据
     if (userList) {
@@ -417,7 +248,7 @@ int loadUsersFromText() {
     return 1;
 }
 
-// 保存用户到文本文件
+//保存用户到文本文件
 int saveUsersToText() {
     FILE* fp = fopen(USER_FILE, "w");
     if (!fp) return 0;
@@ -437,36 +268,213 @@ int saveUsersToText() {
     return 1;
 }
 
-// 查找用户（返回指针，未找到返回NULL）
-User* findUser(const char* userId) {
-    for (int i = 0; i < totalUsers; i++) {
-        if (strcmp(userList[i].userId, userId) == 0) {
-            return &userList[i];
-        }
+//用户注册函数
+int userRegister() {
+    //加载已有用户数据,防止新用户被覆盖掉
+    if (!loadUsersFromText()) {
+        printf("[错误] 加载用户数据失败，无法注册！\n");
+        return 0;
     }
-    return NULL;
-}
-// 需求结构体（需在system.h中声明为extern）
-typedef struct {
-    int data_mb;         // 流量需求(MB)
-    int voice_minutes;   // 通话需求(分钟)
-    int sms;             // 短信需求(条)
-    int valid;           // 需求有效性标记(1:有效)
-} Demand;
-static Demand userDemand = {0, 0, 0, 0};  // 全局需求变量
 
-// 1. 填写需求调查
+    //定义新用户变量
+    char input[20];
+    User newUser = {0};
+    char password1[20], password2[20];
+
+    //输入并校验用户ID
+    while (1) {
+        printf("\n===== 用户注册(输入q/Q可取消注册) =====");
+        printf("\n请输入用户ID（3-20位，字母/数字）：");
+        
+        if (scanf("%19s", input) != 1) {
+            printf("[错误] 输入格式错误，请重新输入！\n");
+            clearInputBuffer();
+            continue;
+        }
+        clearInputBuffer();
+
+        //回退判断
+        if (isQuitInput(input)) {
+            printf("[提示] 已取消注册流程！\n");
+            return 0;
+        }
+       
+        int idLen = strlen(input);
+        if (idLen < 3 || idLen > 20) {
+            printf("[错误] 用户ID长度需在3-20位之间！\n");
+            continue;
+        }
+
+        int valid = 1;
+        for (int i = 0; i < idLen; i++) {
+            if (!isalnum((unsigned char)input[i])) {
+                valid = 0;
+                break;
+            }
+        }
+        if (!valid) {
+            printf("[错误] 用户ID只能包含字母和数字！\n");
+            continue;
+        }
+
+        if (isUserIdExists(input)) {
+            printf("[错误] 该用户ID已被注册，请更换！\n");
+            continue;
+        }
+
+        //确认用户ID有效，保存到新用户信息
+        strcpy(newUser.userId, input);
+
+        break;
+    }
+
+    //输入并校验密码
+    while (1) {
+        printf("请设置密码（3-16位,输入q/Q可取消注册）：");
+        if (scanf("%19s", input) != 1) {
+            printf("[错误] 输入格式错误，请重新输入！\n");
+            clearInputBuffer();
+            continue;
+        }
+        clearInputBuffer();
+
+        //检查是否回退
+        if (isQuitInput(input)) {
+            printf("[提示] 已取消注册流程！\n");
+            return 0;
+        }
+
+        if (strlen(input) < 3 || strlen(input) > 16) {
+            printf("[错误] 密码长度需在3-16位之间！\n");
+            continue;
+        }
+
+        strcpy(password1, input); // 保存第一次输入的密码
+
+        printf("请确认密码（输入q/Q可取消注册）：");
+        if (scanf("%19s", input) != 1) {
+            printf("[错误] 输入格式错误，请重新输入！\n");
+            clearInputBuffer();
+            continue;
+        }
+        clearInputBuffer();
+
+         // 检查确认密码时是否回退
+        if (isQuitInput(input)) {
+            printf("[提示] 已取消注册流程！\n");
+            return 0;
+        }
+
+        strcpy(password2, input);
+
+        if (strcmp(password1, password2) != 0) {
+            printf("[错误] 两次输入的密码不一致！\n");
+            continue;
+        }
+
+        strcpy(newUser.userPwd, password1);
+        break;
+    }
+
+    //输入用户名（支持回退）
+    printf("请输入用户名（输入q/Q可取消）：");
+    if (scanf("%19s", input) != 1) {
+        printf("[错误] 输入格式错误，使用默认用户名！\n");
+        strcpy(newUser.userName, "默认用户");
+    } else {
+        clearInputBuffer();
+        //检查是否回退
+        if (isQuitInput(input)) {
+            printf("[提示] 已取消注册流程！\n");
+            return 0;
+        }
+        strcpy(newUser.userName, input);
+    }
+
+    //初始化其他字段
+    newUser.selectedPkg[0] = '\0';  //未选套餐
+    newUser.useYears = 0;           //使用年限0
+    newUser.totalCost = 0.0;        //累计消费0
+    newUser.userStar = 1;           //初始星级1星
+
+    //扩容用户列表并添加新用户
+    User* tempList = (User*)realloc(userList, (totalUsers + 1) * sizeof(User));
+    if (!tempList) {
+        printf("[错误] 内存分配失败，注册失败！\n");
+        return 0;
+    }
+    userList = tempList;
+    userList[totalUsers] = newUser;
+    totalUsers++;
+
+    //保存到文件
+    if (!saveUsersToText()) {
+        printf("[错误] 保存用户数据失败，但注册流程已完成！\n");
+        return 0;
+    }
+
+    printf("\n[成功] 用户注册完成！用户ID：%s，密码：%s\n", 
+           newUser.userId, newUser.userPwd);
+    return 1;
+}
+
+//用户登录
+void loginUser() {
+   if(loadUsersFromText() != 1)
+   {
+     printf("error\n");
+     return;
+   }
+
+    char id[20], pwd[20];
+
+    printf("\n===== 用户登录 =====\n");
+    printf("请输入用户ID: ");
+    if (scanf("%19s", id) != 1) {
+        printf("[错误] 输入格式错误！\n");
+        clearInputBuffer();
+        return;
+    }
+    clearInputBuffer();
+
+    printf("请输入密码: ");
+    if (scanf("%19s", pwd) != 1) {
+        printf("[错误] 输入格式错误！\n");
+        clearInputBuffer();
+        return;
+    }
+    clearInputBuffer();
+
+    //查找用户
+    User* user = findUser(id);
+    if (!user) {
+        printf("[错误] 用户ID不存在！\n");
+        currentUser = NULL;
+        return;
+    }
+
+    //校验密码
+    if (strcmp(user->userPwd, pwd) == 0) {
+        currentUser = user;
+        printf("[成功] 用户 %s 登录成功！\n", currentUser->userName);
+    } else {
+        printf("[错误] 密码错误！\n");
+        currentUser = NULL;
+    }
+}
+
+//填写需求调查
 void inputDemandByForm() {
-    // 检查登录状态
+    //检查登录状态
     if (currentUser == NULL || strlen(currentUser->userName) == 0) {
         printf("[错误] 请先登录系统！\n");
         return;
     }
 
-    // 重置需求状态
+    //重置需求状态
     userDemand.valid = 0;
 
-    // 输入流量需求（带校验）
+    //输入流量需求（带校验）
     printf("\n===== 需求调查 =====");
     while (1) {
         printf("\n请输入每月流量需求(MB，0-10000)：");
@@ -480,7 +488,7 @@ void inputDemandByForm() {
     }
     clearInputBuffer();
 
-    // 输入通话需求（带校验）
+    //输入通话需求（带校验）
     while (1) {
         printf("请输入每月通话时长需求(分钟，0-3000)：");
         if (scanf("%d", &userDemand.voice_minutes) != 1) {
@@ -493,7 +501,7 @@ void inputDemandByForm() {
     }
     clearInputBuffer();
 
-    // 输入短信需求（带校验）
+    //输入短信需求（带校验）
     while (1) {
         printf("请输入每月短信需求(条，0-1000)：");
         if (scanf("%d", &userDemand.sms) != 1) {
@@ -510,27 +518,27 @@ void inputDemandByForm() {
     printf("\n[成功] 需求调查已保存！\n");
 }
 
-// 2. 计算用户星级
+//计算用户星级
 void calcUserStar() {
-    // 检查登录状态
+    //检查登录状态
     if (currentUser == NULL || strlen(currentUser->userName) == 0) {
         printf("[错误] 请先登录系统！\n");
         return;
     }
 
-    // 基础星级（基于累计消费）
+    //基础星级（基于累计消费）
     int baseStar = 1;
     if (currentUser->totalCost >= 10000)      baseStar = 5;
     else if (currentUser->totalCost >= 5000)  baseStar = 4;
     else if (currentUser->totalCost >= 2000)  baseStar = 3;
     else if (currentUser->totalCost >= 500)   baseStar = 2;
 
-    // 年限加成（最高5星）
+    //年限加成（最高5星）
     int yearBonus = 0;
     if (currentUser->useYears >= 10)  yearBonus = 2;
     else if (currentUser->useYears >= 5)  yearBonus = 1;
 
-    // 最终星级（不超过5星）
+    //最终星级（不超过5星）
     int finalStar = baseStar + yearBonus;
     finalStar = (finalStar > 5) ? 5 : finalStar;
 
@@ -544,19 +552,33 @@ void calcUserStar() {
     printf("当前星级：%d星\n", finalStar);
 }
 
+//优先判断用户是否有套餐
+void recommendPackages() {
+    if (currentUser == NULL) {
+        printf("[错误] 请先登录！\n");
+        return;
+    }
 
-// 工具函数：计算套餐匹配得分
+    // 区分“有套餐用户”和“无套餐用户”
+    if (strlen(currentUser->selectedPkg) == 0) {
+        recommendForNewUser();  //新用户推荐
+    } else {
+        itemBasedCFRecommendation();  //老用户：基于已选套餐的相似推荐
+    }
+}
+
+//计算套餐匹配得分
 static float calcMatchScore(const Package* pkg, const Demand* demand, int userStar) {
     if (!pkg || !demand || !demand->valid) return -1.0f;
 
-    // 基础需求不满足直接淘汰
+    //基础需求不满足直接淘汰
     if (pkg->data_mb < demand->data_mb || 
         pkg->voice_minutes < demand->voice_minutes || 
         pkg->sms < demand->sms) {
         return -1.0f;
     }
 
-    // 资源匹配度计算（1.0为最优）
+    //资源匹配度计算（1.0为最优）
     float dataScore = (demand->data_mb == 0) ? 1.0f : 
                      (1.0f - (pkg->data_mb - demand->data_mb) / (float)(pkg->data_mb + 1));
     float voiceScore = (demand->voice_minutes == 0) ? 1.0f : 
@@ -564,21 +586,14 @@ static float calcMatchScore(const Package* pkg, const Demand* demand, int userSt
     float smsScore = (demand->sms == 0) ? 1.0f : 
                     (1.0f - (pkg->sms - demand->sms) / (float)(pkg->sms + 1));
 
-    // 价格优势计算（星级越高，价格敏感度越低）
+    //价格优势计算（星级越高，价格敏感度越低）
     float priceScore = 1.0f - (pkg->monthly_fee / (float)(100 + userStar * 20));
 
-    // 综合得分（加权求和）
+    //综合得分（加权求和）
     return dataScore * 0.4 + voiceScore * 0.3 + smsScore * 0.2 + priceScore * 0.1;
 }
 
-// 工具函数：交换套餐（排序用）
-static void swapPackages(Package* a, Package* b) {
-    Package temp = *a;
-    *a = *b;
-    *b = temp;
-}
-
-// 3. 根据需求匹配套餐（补充实现）
+//根据需求匹配套餐
 void matchPackagesByDemand() {
     matchedPkgCount = 0; // 重置匹配结果
     
@@ -597,7 +612,199 @@ void matchPackagesByDemand() {
     }
 }
 
-// 4. 显示推荐套餐
+//针对未选择套餐用户的推荐函数
+void recommendForNewUser() {
+    matchedPkgCount = 0;  // 重置推荐结果
+
+    //前置检查：用户必须登录且未选择套餐
+    if (currentUser == NULL) {
+        printf("[错误] 请先登录系统！\n");
+        return;
+    }
+    if (strlen(currentUser->selectedPkg) > 0) {
+        printf("[提示] 该用户已选择套餐，使用常规相似套餐推荐！\n");
+        itemBasedCFRecommendation();  //调用原有基于物品的推荐
+        return;
+    }
+
+    //使用用户填写的需求匹配
+    if (userDemand.valid) {  // 若用户填写了需求调查
+        printf("\n===== 基于用户需求的推荐（新用户）=====\n");
+        matchPackagesByDemand();  
+        if (matchedPkgCount > 0) {
+            showMatchedPackages();
+            return;
+        }
+    }
+    showMatchedPackages();
+}
+
+//计算两个套餐的属性相似度（基于余弦相似度）
+static float calcPackageSimilarity(const Package* pkgA, const Package* pkgB) {
+    if (!pkgA || !pkgB) return 0.0f;
+
+    // 提取套餐属性作为向量（月费、流量、通话、短信）
+    // 注意：月费需取倒数（价格越低，与"性价比高"的套餐相似度越高）
+    float vecA[4] = {
+        1.0f / (pkgA->monthly_fee + 1),  // 月费（倒数处理）
+        (float)pkgA->data_mb,
+        (float)pkgA->voice_minutes,
+        (float)pkgA->sms
+    };
+    float vecB[4] = {
+        1.0f / (pkgB->monthly_fee + 1),
+        (float)pkgB->data_mb,
+        (float)pkgB->voice_minutes,
+        (float)pkgB->sms
+    };
+
+    // 计算余弦相似度：cosθ = (A·B) / (|A|·|B|)
+    float dotProduct = 0.0f;  // 点积
+    float normA = 0.0f, normB = 0.0f;  // 模长
+    for (int i = 0; i < 4; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        normA += vecA[i] * vecA[i];
+        normB += vecB[i] * vecB[i];
+    }
+    if (normA == 0 || normB == 0) return 0.0f;  // 避免除零
+
+    return dotProduct / (sqrt(normA) * sqrt(normB));
+}
+
+//获取用户对套餐的评分（从交互矩阵中）
+static float getUserRatingForPackage(int userIndex, int pkgIndex) {
+    if (userIndex < 0 || userIndex >= totalUsers) return 0.0f;
+    if (pkgIndex < 0 || pkgIndex >= totalPackages) return 0.0f;
+    return userPkgMatrix[userIndex][pkgIndex];
+}
+
+//针对已选择套餐用户的推荐函数
+void itemBasedCFRecommendation() {
+    matchedPkgCount = 0;  // 重置推荐结果
+
+    //前置检查
+    if (currentUser == NULL) {
+        printf("[错误] 请先登录系统！\n");
+        return;
+    }
+    if (totalPackages == 0) {
+        printf("[错误] 暂无套餐数据！\n");
+        return;
+    }
+
+    //找到当前用户有交互的套餐（评分>0的套餐）
+    int userIndex = -1;
+    for (int i = 0; i < totalUsers; i++) {
+        if (strcmp(userList[i].userId, currentUser->userId) == 0) {
+            userIndex = i;
+            break;
+        }
+    }
+    if (userIndex == -1) {
+        printf("[错误] 用户数据不存在！\n");
+        return;
+    }
+
+    //收集用户已交互的套餐及评分
+    typedef struct {
+        int pkgIndex;
+        float rating;
+    } UserInteraction;
+    UserInteraction interactions[10] = {0};  // 最多10个交互套餐
+    int interactionCount = 0;
+
+    for (int i = 0; i < totalPackages; i++) {
+        float rating = getUserRatingForPackage(userIndex, i);
+        if (rating > 0) {
+            interactions[interactionCount].pkgIndex = i;
+            interactions[interactionCount].rating = rating;
+            interactionCount++;
+        }
+    }
+
+    //如果用户无交互历史，基于已选套餐推荐（若有）
+    if (interactionCount == 0) {
+        if (strlen(currentUser->selectedPkg) == 0) {
+            printf("[提示] 暂无用户交互数据，无法推荐相似套餐！\n");
+            return;
+        }
+        // 将已选套餐作为唯一交互项
+        int selectedPkgId = atoi(currentUser->selectedPkg);
+        for (int i = 0; i < totalPackages; i++) {
+            if (packageList[i].id == selectedPkgId) {
+                interactions[0].pkgIndex = i;
+                interactions[0].rating = 4.0f;  // 假设对已选套餐评分4分
+                interactionCount = 1;
+                break;
+            }
+        }
+    }
+
+    //计算待推荐套餐的得分
+    float pkgScores[50] = {0};  // 套餐推荐得分
+    float similaritySums[50] = {0};  // 相似度总和（用于归一化）
+
+    for (int i = 0; i < interactionCount; i++) {
+        int srcPkgIndex = interactions[i].pkgIndex;  // 用户交互过的套餐
+        float userRating = interactions[i].rating;   // 用户对该套餐的评分
+
+        //计算该套餐与其他所有套餐的相似度
+        for (int j = 0; j < totalPackages; j++) {
+            if (j == srcPkgIndex) continue;  // 跳过自身
+
+            float sim = calcPackageSimilarity(&packageList[srcPkgIndex], &packageList[j]);
+            if (sim <= 0) continue;  // 只考虑正相似
+
+            // 得分 = 相似度 * 用户评分（累加）
+            pkgScores[j] += sim * userRating;
+            similaritySums[j] += sim;  // 累计相似度
+        }
+    }
+
+    //归一化得分并筛选推荐结果（排除用户已交互的套餐）
+    for (int j = 0; j < totalPackages; j++) {
+        // 跳过用户已交互的套餐
+        int isInteracted = 0;
+        for (int i = 0; i < interactionCount; i++) {
+            if (j == interactions[i].pkgIndex) {
+                isInteracted = 1;
+                break;
+            }
+        }
+        if (isInteracted) continue;
+
+        // 归一化得分（除以相似度总和）
+        if (similaritySums[j] > 0) {
+            float finalScore = pkgScores[j] / similaritySums[j];
+            if (finalScore >= 2.5f) {  // 得分阈值（可调整）
+                matchedPackages[matchedPkgCount++] = packageList[j];
+            }
+        }
+    }
+
+    //按得分排序推荐结果（从高到低）
+    for (int i = 0; i < matchedPkgCount - 1; i++) {
+        for (int j = 0; j < matchedPkgCount - i - 1; j++) {
+            // 重新计算临时得分用于排序
+            float scoreJ = 0, scoreJ1 = 0;
+            for (int k = 0; k < interactionCount; k++) {
+                int srcIdx = interactions[k].pkgIndex;
+                scoreJ += calcPackageSimilarity(&packageList[srcIdx], &matchedPackages[j]) * interactions[k].rating;
+                scoreJ1 += calcPackageSimilarity(&packageList[srcIdx], &matchedPackages[j+1]) * interactions[k].rating;
+            }
+            if (scoreJ < scoreJ1) {
+                Package temp = matchedPackages[j];
+                matchedPackages[j] = matchedPackages[j+1];
+                matchedPackages[j+1] = temp;
+            }
+        }
+    }
+
+    printf("\n===== 基于套餐相似性的推荐结果 =====\n");
+    showMatchedPackages();  // 复用原显示函数
+}
+
+//显示推荐套餐
 void showMatchedPackages() {
     // 前置条件检查
     if (currentUser == NULL || strlen(currentUser->userName) == 0) {
@@ -628,7 +835,7 @@ void showMatchedPackages() {
         
         for (int i = start; i < end; i++) {
             const Package* pkg = &matchedPackages[i];
-            printf("| %2d | %-14s | %8.2f | %8d | %8d | %8d | %8.1f |\n",
+            printf("| %2d | %-14s | %8.2f | %8d | %8d | %8d  |\n",
                    pkg->id, pkg->name, pkg->monthly_fee,
                    pkg->data_mb, pkg->voice_minutes, pkg->sms);
         }

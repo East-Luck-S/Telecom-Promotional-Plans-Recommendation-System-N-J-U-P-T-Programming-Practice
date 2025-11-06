@@ -306,7 +306,7 @@ int userRegister() {
     //输入并校验用户ID
     while (1) {
         printf("\n===== 用户注册(输入q/Q可取消注册) =====");
-        printf("\n请输入用户ID（3-20位，字母/数字）：");
+        printf("\n请输入用户ID（1-20位，字母/数字）：");
         
         if (scanf("%19s", input) != 1) {
             printf("[错误] 输入格式错误，请重新输入！\n");
@@ -322,8 +322,8 @@ int userRegister() {
         }
        
         int idLen = strlen(input);
-        if (idLen < 3 || idLen > 20) {
-            printf("[错误] 用户ID长度需在3-20位之间！\n");
+        if (idLen < 1 || idLen > 20) {
+            printf("[错误] 用户ID长度需在1-20位之间！\n");
             continue;
         }
 
@@ -414,7 +414,7 @@ int userRegister() {
     }
 
     //初始化其他字段
-    newUser.selectedPkg[0] = '\0';  //未选套餐
+    newUser.selectedPkg[0] = '0';  //未选套餐
     newUser.useYears = 0;           //使用年限0
     newUser.totalCost = 0.0;        //累计消费0
     newUser.userStar = 1;           //初始星级1星
@@ -588,7 +588,7 @@ void recommendPackages() {
     }
 
     // 区分“有套餐用户”和“无套餐用户”
-    if (strlen(currentUser->selectedPkg) == 0) {
+    if (strcmp(currentUser->selectedPkg, "0") == 0) {
         recommendForNewUser();  //新用户推荐
     } else {
         itemBasedCFRecommendation();  //老用户：基于已选套餐的相似推荐
@@ -649,7 +649,7 @@ void recommendForNewUser() {
         printf("[错误] 请先登录系统！\n");
         return;
     }
-    if (strlen(currentUser->selectedPkg) > 0) {
+    if (strcmp(currentUser->selectedPkg, "0") != 0) {
         printf("[提示] 该用户已选择套餐，使用常规相似套餐推荐！\n");
         itemBasedCFRecommendation();  //调用原有基于物品的推荐
         return;
@@ -663,6 +663,10 @@ void recommendForNewUser() {
             showMatchedPackages();
             return;
         }
+    }
+    else {
+        printf("[提示] 用户未填写需求调查，无法基于需求推荐套餐！\n");
+        return;
     }
     showMatchedPackages();
 }
@@ -854,21 +858,68 @@ void showMatchedPackages() {
         int start = (currentPage - 1) * pageSize;
         int end = (currentPage * pageSize < matchedPkgCount) ? currentPage * pageSize : matchedPkgCount;
 
-        // 打印当前页套餐
-        printf("\n===== 推荐套餐（%d星用户）- 第%d/%d页 =====\n", 
-               currentUser->userStar, currentPage, totalPages);
-        printf("+----+----------------+----------+----------+----------+----------+------------+\n");
-        printf("| ID | 套餐名称       | 月费(元) | 流量(MB) | 通话(分钟)| 短信(条) |\n");
-        printf("+----+----------------+----------+----------+----------+----------+------------+\n");
-        
-        for (int i = start; i < end; i++) {
-            const Package* pkg = &matchedPackages[i];
-            printf("| %2d | %-14s | %8.2f | %6d | %8d | %6d  |\n",
-                   pkg->id, pkg->name, pkg->monthly_fee,
-                   pkg->data_mb, pkg->voice_minutes, pkg->sms);
-        }
-        
-        printf("+----+----------------+----------+----------+----------+----------+------------+\n");
+        // 表头
+printf("+------+----------------+------------+------------+------------+------------+\n");
+printf("|  ID  |    套餐名称     |  月费(元)  |  流量(MB)  | 通话(分钟) |  短信(条)  |\n");
+printf("+------+----------------+------------+------------+------------+------------+\n");
+
+// 数据行循环
+for (int i = start; i < end; i++) {
+    const Package* pkg = &matchedPackages[i];
+    char buf[32];
+    int len, pad, left, right;
+
+    // ID 居中
+    sprintf(buf, "%d", pkg->id);
+    len = strlen(buf); pad = 6 - len; left = pad/2; right = pad - left;
+    printf("|");
+    for (int s=0; s<left; s++) printf(" ");
+    printf("%s", buf);
+    for (int s=0; s<right; s++) printf(" ");
+
+    // 套餐名称居中
+    len = strlen(pkg->name); pad = 16 - len; left = pad/2; right = pad - left;
+    printf("|");
+    for (int s=0; s<left; s++) printf(" ");
+    printf("%s", pkg->name);
+    for (int s=0; s<right; s++) printf(" ");
+
+    // 月费居中
+    sprintf(buf, "%.2f", pkg->monthly_fee);
+    len = strlen(buf); pad = 12 - len; left = pad/2; right = pad - left;
+    printf("|");
+    for (int s=0; s<left; s++) printf(" ");
+    printf("%s", buf);
+    for (int s=0; s<right; s++) printf(" ");
+
+    // 流量居中
+    sprintf(buf, "%d", pkg->data_mb);
+    len = strlen(buf); pad = 12 - len; left = pad/2; right = pad - left;
+    printf("|");
+    for (int s=0; s<left; s++) printf(" ");
+    printf("%s", buf);
+    for (int s=0; s<right; s++) printf(" ");
+
+    // 通话居中
+    sprintf(buf, "%d", pkg->voice_minutes);
+    len = strlen(buf); pad = 12 - len; left = pad/2; right = pad - left;
+    printf("|");
+    for (int s=0; s<left; s++) printf(" ");
+    printf("%s", buf);
+    for (int s=0; s<right; s++) printf(" ");
+
+    // 短信居中
+    sprintf(buf, "%d", pkg->sms);
+    len = strlen(buf); pad = 12 - len; left = pad/2; right = pad - left;
+    printf("|");
+    for (int s=0; s<left; s++) printf(" ");
+    printf("%s", buf);
+    for (int s=0; s<right; s++) printf(" ");
+    printf("|\n");   // ✅ 每行最后换行
+}
+
+// 表尾
+printf("+------+----------------+------------+------------+------------+------------+\n");
 
         // 分页控制
         if (totalPages <= 1) break;

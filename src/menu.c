@@ -128,7 +128,6 @@ void userFunctionMenu() {
                 break;
             case 3:
                 recommendPackages();//查看推荐套餐
-                showMatchedPackages();// 显示推荐套餐
                 break;
             case 4:
                 queryUserPackage();//查询套餐

@@ -806,45 +806,6 @@ void generate_user_tag(User* user, Demand* demand, char* tag_buf) {
         tag_buf[strlen(tag_buf)-1] = '\0';
     }
 }
-
-// int add_all_user_tags() {
-//     UserTag tags[100];
-//     int tag_count = 0;
-//     Demand demand;
-//     char line[256];
-
-//     // 加载用户数据
-//     loadUsersFromText();
-
-//     // 读取用户需求文件
-//     FILE* demand_fp = fopen(USER_DEMAND_FILE, "r");
-//     if (!demand_fp) return 0;
-
-//     // 为每个用户生成标签
-//     for (int i = 0; i < totalUsers; i++) {
-//         // 查找用户需求
-//         rewind(demand_fp);
-//         memset(&demand, 0, sizeof(demand));
-//         while (fgets(line, sizeof(line), demand_fp)) {
-//             char* uid = strtok(line, ",");
-//             if (uid && strcmp(uid, userList[i].userId) == 0) {
-//                 demand.data_mb = atoi(strtok(NULL, ","));
-//                 demand.voice_minutes = atoi(strtok(NULL, ","));
-//                 demand.sms = atoi(strtok(NULL, ","));
-//                 demand.valid = atoi(strtok(NULL, ","));
-//                 break;
-//             }
-//         }
-
-//         // 生成标签
-//         tags[tag_count].user_id = atoi(userList[i].userId);
-//         generate_user_tag(&userList[i], &demand, tags[tag_count].tags);
-//         tag_count++;
-//     }
-
-//     fclose(demand_fp);
-//     return save_user_tags(tags, tag_count);
-// }
 void show_user_tag(int user_id) {
     UserTag tags[100];
     int tag_count;

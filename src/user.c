@@ -1,4 +1,5 @@
 #include "user.h"
+#include "admin.h"
 #include "system.h"
 #include <math.h>
 
@@ -405,21 +406,44 @@ int userRegister() {
     }
 
     //初始化其他字段
-    newUser.selectedPkg[0] = '\0';  //未选套餐
+    newUser.selectedPkg[0] = '0';  //未选套餐
     newUser.useYears = 0;           //使用年限0
     newUser.totalCost = 0.0;        //累计消费0
     newUser.userStar = 1;           //初始星级1星
 
-    //扩容用户列表并添加新用户
-    User* tempList = (User*)realloc(userList, (totalUsers + 1) * sizeof(User));
-    if (!tempList) {
-        printf("[错误] 内存分配失败，注册失败！\n");
-        return 0;
-    }
-    userList = tempList;
-    userList[totalUsers] = newUser;
-    totalUsers++;
+           //扩容用户列表并添加新用户
+           User* tempList = (User*)realloc(userList, (totalUsers + 1) * sizeof(User));
+           if (!tempList) {
+               printf("[错误] 内存分配失败，注册失败！\n");
+               return 0;
+            }
+           userList = tempList;
+            userList[totalUsers] = newUser;
+          totalUsers++;
+           UserTag* userTags = (UserTag*)malloc(totalUsers * sizeof(UserTag));
+        if (userTags == NULL) {
+           printf("内存分配失败，无法保存用户标签\n");
+           return 0;
+        }
 
+        // 2. 为每个用户生成标签并填充到UserTag数组
+        for (int i = 0; i < totalUsers; i++) {
+            userTags[i].user_id = atoi(userList[i].userId); // 假设userId是数字字符串
+           // 生成标签到tag_buf（需确保tag_buf已初始化，如全局变量）
+        generate_user_tag(&userList[i], &userDemand, tag_buf);
+        strncpy(userTags[i].tags, tag_buf, sizeof(userTags[i].tags) - 1);
+        userTags[i].tags[sizeof(userTags[i].tags) - 1] = '\0';  // 确保字符串结束符
+        }
+        // 3. 调用save_user_tags保存，传入UserTag数组和数量（仅2个参数）
+        int saveResult = save_user_tags(userTags, totalUsers);
+        if (saveResult) {
+           printf("用户标签保存成功\n");
+        } else {
+          printf("用户标签保存失败\n");
+        }
+
+        // 4. 释放动态分配的内存
+        free(userTags);
     //保存到文件
     if (!saveUsersToText()) {
         printf("[错误] 保存用户数据失败，但注册流程已完成！\n");
@@ -579,7 +603,7 @@ void recommendPackages() {
     }
 
     // 区分“有套餐用户”和“无套餐用户”
-    if (strlen(currentUser->selectedPkg) == 0) {
+    if (strcmp(currentUser->selectedPkg, "0") == 0) {
         recommendForNewUser();  //新用户推荐
     } else {
         itemBasedCFRecommendation();  //老用户：基于已选套餐的相似推荐
@@ -640,7 +664,7 @@ void recommendForNewUser() {
         printf("[错误] 请先登录系统！\n");
         return;
     }
-    if (strlen(currentUser->selectedPkg) > 0) {
+    if (strcmp(currentUser->selectedPkg, "0")  != 0) {
         printf("[提示] 该用户已选择套餐，使用常规相似套餐推荐！\n");
         itemBasedCFRecommendation();  //调用原有基于物品的推荐
         return;
@@ -705,7 +729,7 @@ void itemBasedCFRecommendation() {
     }
 
     // 检查用户是否已选择套餐（无已选套餐则无法推荐）
-    if (strlen(currentUser->selectedPkg) == 0) {
+    if (strcmp(currentUser->selectedPkg, "0") == 0) {
         printf("[提示] 请先选择套餐，再获取相似推荐！\n");
         return;
     }

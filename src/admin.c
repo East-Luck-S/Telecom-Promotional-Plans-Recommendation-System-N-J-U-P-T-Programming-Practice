@@ -8,7 +8,7 @@
 
 int pkgCount=0;			   // 总套餐数量  
 int adminCount = 0;		 // 管理员数量
-
+char* tag_buf = NULL;
 // 检查输入是否为回退指令（q/Q）
 static int isQuitInput(const char* input) {
     return (strcmp(input, "q") == 0 || strcmp(input, "Q") == 0);
@@ -18,6 +18,14 @@ static int isQuitInput(const char* input) {
 // 从文件加载管理员账号
 int load_admin_accounts(AdminAccount admins[], int *count)
 {
+    if (tag_buf == NULL) {
+        tag_buf = (char*)malloc(128 * sizeof(char));  // 大小匹配 UserTag.tags
+        if (tag_buf == NULL) {
+            fprintf(stderr, "内存分配失败：tag_buf\n");
+            exit(1);
+        }
+    }
+
 	FILE *fp = fopen(ADMIN_FILE, "r");
 	if (!fp) { *count = 0; return 0; }
 	int idx = 0;
@@ -755,7 +763,7 @@ int save_user_tags(UserTag tags[], int count) {
 }
 //为所有用户添加标签并保存
 void generate_user_tag(User* user, Demand* demand, char* tag_buf) {
-    tag_buf[0] = '\0';
+    memset(tag_buf, 0, 128);  // 清空缓冲区
     // 基于用户星级
     if (user->userStar >= 4) {
         strcat(tag_buf, "高星级,");
@@ -799,44 +807,44 @@ void generate_user_tag(User* user, Demand* demand, char* tag_buf) {
     }
 }
 
-int add_all_user_tags() {
-    UserTag tags[100];
-    int tag_count = 0;
-    Demand demand;
-    char line[256];
+// int add_all_user_tags() {
+//     UserTag tags[100];
+//     int tag_count = 0;
+//     Demand demand;
+//     char line[256];
 
-    // 加载用户数据
-    loadUsersFromText();
+//     // 加载用户数据
+//     loadUsersFromText();
 
-    // 读取用户需求文件
-    FILE* demand_fp = fopen(USER_DEMAND_FILE, "r");
-    if (!demand_fp) return 0;
+//     // 读取用户需求文件
+//     FILE* demand_fp = fopen(USER_DEMAND_FILE, "r");
+//     if (!demand_fp) return 0;
 
-    // 为每个用户生成标签
-    for (int i = 0; i < totalUsers; i++) {
-        // 查找用户需求
-        rewind(demand_fp);
-        memset(&demand, 0, sizeof(demand));
-        while (fgets(line, sizeof(line), demand_fp)) {
-            char* uid = strtok(line, ",");
-            if (uid && strcmp(uid, userList[i].userId) == 0) {
-                demand.data_mb = atoi(strtok(NULL, ","));
-                demand.voice_minutes = atoi(strtok(NULL, ","));
-                demand.sms = atoi(strtok(NULL, ","));
-                demand.valid = atoi(strtok(NULL, ","));
-                break;
-            }
-        }
+//     // 为每个用户生成标签
+//     for (int i = 0; i < totalUsers; i++) {
+//         // 查找用户需求
+//         rewind(demand_fp);
+//         memset(&demand, 0, sizeof(demand));
+//         while (fgets(line, sizeof(line), demand_fp)) {
+//             char* uid = strtok(line, ",");
+//             if (uid && strcmp(uid, userList[i].userId) == 0) {
+//                 demand.data_mb = atoi(strtok(NULL, ","));
+//                 demand.voice_minutes = atoi(strtok(NULL, ","));
+//                 demand.sms = atoi(strtok(NULL, ","));
+//                 demand.valid = atoi(strtok(NULL, ","));
+//                 break;
+//             }
+//         }
 
-        // 生成标签
-        tags[tag_count].user_id = atoi(userList[i].userId);
-        generate_user_tag(&userList[i], &demand, tags[tag_count].tags);
-        tag_count++;
-    }
+//         // 生成标签
+//         tags[tag_count].user_id = atoi(userList[i].userId);
+//         generate_user_tag(&userList[i], &demand, tags[tag_count].tags);
+//         tag_count++;
+//     }
 
-    fclose(demand_fp);
-    return save_user_tags(tags, tag_count);
-}
+//     fclose(demand_fp);
+//     return save_user_tags(tags, tag_count);
+// }
 void show_user_tag(int user_id) {
     UserTag tags[100];
     int tag_count;

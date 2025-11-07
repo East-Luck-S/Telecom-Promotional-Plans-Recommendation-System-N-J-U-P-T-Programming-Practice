@@ -10,12 +10,12 @@
 // 用户标签文件路径
 #define USER_TAG_FILE "user_tags.txt"
 
-
 typedef struct user_tag {
 	int user_id;
 	char tags[128]; // 逗号分隔的标签，如“重度流量,低通话,学生”
 } UserTag;
 
+extern char* tag_buf;
 
 /* 管理员相关函数 */
 int load_admin_accounts(AdminAccount admins[], int *count);// 从文件加载管理员账号
@@ -35,7 +35,7 @@ void list_packages(Package pkgs[], int count);// 列出所有套餐
 // 在 admin.h 中确保已有以下声明
 int load_user_tags(UserTag tags[], int *count);
 int save_user_tags(UserTag tags[], int count);
-int add_all_user_tags();
+void generate_user_tag(User* user, Demand* demand, char* tag_buf);// 为用户生成标签
 void show_user_tag(int user_id);
 void match_packages_by_tag(int user_id, Package matched[], int* matched_count);
 int modify_user_tag(int user_id, const char* new_tags);

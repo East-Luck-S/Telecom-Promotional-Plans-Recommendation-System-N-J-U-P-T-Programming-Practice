@@ -297,7 +297,7 @@ int userRegister() {
     //输入并校验用户ID
     while (1) {
         printf("\n===== 用户注册(输入q/Q可取消注册) =====");
-        printf("\n请输入用户ID（3-20位，字母/数字）：");
+        printf("\n请输入用户ID（1-20位，字母/数字）：");
         
         if (scanf("%19s", input) != 1) {
             printf("[错误] 输入格式错误，请重新输入！\n");
@@ -313,8 +313,8 @@ int userRegister() {
         }
        
         int idLen = strlen(input);
-        if (idLen < 3 || idLen > 20) {
-            printf("[错误] 用户ID长度需在3-20位之间！\n");
+        if (idLen < 1 || idLen > 20) {
+            printf("[错误] 用户ID长度需在1-20位之间！\n");
             continue;
         }
 

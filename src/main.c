@@ -10,13 +10,13 @@ int main()
 {
 	printf("应用初始化");
 	if (!load_admin_accounts(admins, &adminCount)) {
-            printf("              \n初始化失败：未找到管理员账号文件。\n");
+            printf("初始化失败：未找到管理员账号文件。\n");
     }// 从文件加载管理员账号
 	if(!load_packages(allPackages,&pkgCount)){
-			printf("              \n初始化失败：未找到套餐数据文件。\n");
+			printf("初始化失败：未找到套餐数据文件。\n");
 	}// 从文件加载套餐
 	if(!loadUsersFromText()){
-			printf("              \n初始化失败：未找到用户账号文件，\n");
+			printf("初始化失败：未找到用户账号文件，\n");
 	}
 	mainMenu();
 	return 0;

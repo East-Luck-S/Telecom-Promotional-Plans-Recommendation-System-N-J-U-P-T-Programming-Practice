@@ -18,8 +18,9 @@ void mainMenu() {
         printf("\n==============================================================\n");
 
         int choice;
+        printf("                       您的选择是：");
         if (scanf("%d", &choice) != 1) {
-            printf("输入错误！\n");
+            printf("                     输入错误！\n");
             clearInputBuffer();
             continue;
         }
@@ -29,10 +30,11 @@ void mainMenu() {
         switch (choice) {
             case 1:
                 loadPackagesFromText();
-                loginUser();//用户登入函数
-                // 登录成功后跳转到用户功能菜单
-                if (strlen(currentUser->userId) > 0) {
-                    userFunctionMenu();
+                loginUser();
+                if (currentUser != NULL && strlen(currentUser->userId) > 0) {
+                    userFunctionMenu(); // 进入用户菜单
+                } else {
+                    printf("                      回到主菜单...\n");
                 }
                 break;
             case 3:{
@@ -43,15 +45,15 @@ void mainMenu() {
                 break;
             }
             case 4:
-                printf("程序退出。\n");
+                printf("                     程序退出。\n");
                 break;
             case 2:
                 if (userRegister()) {
-                    printf("请使用新注册的账号登录。\n");
+                    printf("               请使用新注册的账号登录。\n");
                 }
                 break;
             default:
-                printf("无效选项，请重新输入！\n");
+                printf("              无效选项，请重新输入！\n");
         }
         if (choice == 4) {
             break;
@@ -69,13 +71,16 @@ void adminMenu(int index) {
         printf("                      3. [修改当前套餐]\n");
         printf("                      4. [修改用户标签]\n");
         printf("                      5. [用户套餐修改]\n");
-        printf("\n==============================================================\n");
         // 超级管理员特有选项
         if (admins[index].is_super) {
             printf("                      6. [管理员账户修改]\n");
-            printf("                      7. [返回主菜单]\n");
+            printf("                      7. [返回主菜单]");
+            printf("\n==============================================================\n");
+
         } else {
-            printf("                      6. [返回主菜单]\n");
+            printf("                      6. [返回主菜单]");
+            printf("\n==============================================================\n");
+
         }
         printf("                       请选择操作：");
         
@@ -118,8 +123,10 @@ void userFunctionMenu() {
         printf("\n==============================================================\n");
         
         int choice;
+        printf("                       您的选择是：");
+
         if (scanf("%d", &choice) != 1) {
-            printf("输入错误！\n");
+            printf("                      输入错误！\n");
             clearInputBuffer();
             continue;
         }

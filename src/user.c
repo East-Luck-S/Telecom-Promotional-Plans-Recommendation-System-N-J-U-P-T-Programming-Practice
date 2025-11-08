@@ -297,11 +297,11 @@ int userRegister() {
 
     //输入并校验用户ID
     while (1) {
-        printf("\n===== 用户注册(输入q/Q可取消注册) =====");
-        printf("\n请输入用户ID（1-20位，字母/数字）：");
+        printf("\n========================= 用户注册(输入q/Q可取消注册) ==============================");
+        printf("\n                      请输入用户ID（1-20位，字母/数字）:");
         
         if (scanf("%19s", input) != 1) {
-            printf("[错误] 输入格式错误，请重新输入！\n");
+            printf("                      [错误] 输入格式错误，请重新输入！\n");
             clearInputBuffer();
             continue;
         }
@@ -309,13 +309,13 @@ int userRegister() {
 
         //回退判断
         if (isQuitInput(input)) {
-            printf("[提示] 已取消注册流程！\n");
+            printf("                         [提示] 已取消注册流程！\n");
             return 0;
         }
        
         int idLen = strlen(input);
         if (idLen < 1 || idLen > 20) {
-            printf("[错误] 用户ID长度需在1-20位之间！\n");
+            printf("                     [错误] 用户ID长度需在1-20位之间！\n");
             continue;
         }
 
@@ -327,12 +327,12 @@ int userRegister() {
             }
         }
         if (!valid) {
-            printf("[错误] 用户ID只能包含字母和数字！\n");
+            printf("                     [错误] 用户ID只能包含字母和数字！\n");
             continue;
         }
 
         if (isUserIdExists(input)) {
-            printf("[错误] 该用户ID已被注册，请更换！\n");
+            printf("                     [错误] 该用户ID已被注册，请更换！\n");
             continue;
         }
 
@@ -344,9 +344,9 @@ int userRegister() {
 
     //输入并校验密码
     while (1) {
-        printf("请设置密码（3-16位,输入q/Q可取消注册）：");
+        printf("                  请设置密码（3-16位,输入q/Q可取消注册）：");
         if (scanf("%19s", input) != 1) {
-            printf("[错误] 输入格式错误，请重新输入！\n");
+            printf("                     [错误] 输入格式错误，请重新输入！\n");
             clearInputBuffer();
             continue;
         }
@@ -354,20 +354,20 @@ int userRegister() {
 
         //检查是否回退
         if (isQuitInput(input)) {
-            printf("[提示] 已取消注册流程！\n");
+            printf("                        [提示] 已取消注册流程！\n");
             return 0;
         }
 
         if (strlen(input) < 3 || strlen(input) > 16) {
-            printf("[错误] 密码长度需在3-16位之间！\n");
+            printf("                     [错误] 密码长度需在3-16位之间！\n");
             continue;
         }
 
         strcpy(password1, input); // 保存第一次输入的密码
 
-        printf("请确认密码（输入q/Q可取消注册）：");
+        printf("                   请确认密码（输入q/Q可取消注册）：");
         if (scanf("%19s", input) != 1) {
-            printf("[错误] 输入格式错误，请重新输入！\n");
+            printf("                     [错误] 输入格式错误，请重新输入！\n");
             clearInputBuffer();
             continue;
         }
@@ -375,14 +375,14 @@ int userRegister() {
 
          // 检查确认密码时是否回退
         if (isQuitInput(input)) {
-            printf("[提示] 已取消注册流程！\n");
+            printf("                       [提示] 已取消注册流程！\n");
             return 0;
         }
 
         strcpy(password2, input);
 
         if (strcmp(password1, password2) != 0) {
-            printf("[错误] 两次输入的密码不一致！\n");
+            printf("                     [错误] 两次输入的密码不一致！\n");
             continue;
         }
 
@@ -391,15 +391,15 @@ int userRegister() {
     }
 
     //输入用户名（支持回退）
-    printf("请输入用户名（输入q/Q可取消）：");
+    printf("                       请输入用户名（输入q/Q可取消）：");
     if (scanf("%19s", input) != 1) {
-        printf("[错误] 输入格式错误，使用默认用户名！\n");
+        printf("                 [错误] 输入格式错误，使用默认用户名！\n");
         strcpy(newUser.userName, "默认用户");
     } else {
         clearInputBuffer();
         //检查是否回退
         if (isQuitInput(input)) {
-            printf("[提示] 已取消注册流程！\n");
+            printf("                    [提示] 已取消注册流程！\n");
             return 0;
         }
         strcpy(newUser.userName, input);
@@ -414,7 +414,7 @@ int userRegister() {
            //扩容用户列表并添加新用户
            User* tempList = (User*)realloc(userList, (totalUsers + 1) * sizeof(User));
            if (!tempList) {
-               printf("[错误] 内存分配失败，注册失败！\n");
+               printf("               [错误] 内存分配失败，注册失败！\n");
                return 0;
             }
            userList = tempList;
@@ -422,7 +422,7 @@ int userRegister() {
           totalUsers++;
            UserTag* userTags = (UserTag*)malloc(totalUsers * sizeof(UserTag));
         if (userTags == NULL) {
-           printf("内存分配失败，无法保存用户标签\n");
+           printf("                  内存分配失败，无法保存用户标签\n");
            return 0;
         }
 
@@ -437,74 +437,93 @@ int userRegister() {
         // 3. 调用save_user_tags保存，传入UserTag数组和数量（仅2个参数）
         int saveResult = save_user_tags(userTags, totalUsers);
         if (saveResult) {
-           printf("用户标签保存成功\n");
+           printf("                            用户标签保存成功\n");
         } else {
-          printf("用户标签保存失败\n");
+          printf("                              用户标签保存失败\n");
         }
 
         // 4. 释放动态分配的内存
         free(userTags);
     //保存到文件
     if (!saveUsersToText()) {
-        printf("[错误] 保存用户数据失败，但注册流程已完成！\n");
+        printf("         [错误] 保存用户数据失败，但注册流程已完成！\n");
         return 0;
     }
 
-    printf("\n[成功] 用户注册完成！用户ID：%s，密码：%s\n", 
+    printf("\n          [成功] 用户注册完成！用户ID：%s，密码：%s\n", 
            newUser.userId, newUser.userPwd);
     return 1;
 }
 
 //用户登录
 void loginUser() {
-   if(loadUsersFromText() != 1)
-   {
-     printf("error\n");
-     return;
-   }
+    char userId[20], password[20];
+    currentUser = NULL; // 初始化为NULL，确保失败时状态正确
 
-    char id[20], pwd[20];
-
-    printf("\n===== 用户登录 =====\n");
-    printf("请输入用户ID: ");
-    if (scanf("%19s", id) != 1) {
-        printf("[错误] 输入格式错误！\n");
+    while (1) {
+        printf("\n========================= 用户登录 =========================\n");
+        printf("                      请输入用户ID（输入q/Q取消）: ");
+        
+        // 读取用户ID
+        if (scanf("%19s", userId) != 1) {
+            printf("                      [错误] 输入格式错误，返回主菜单！\n");
+            clearInputBuffer();
+            currentUser = NULL; // 输入错误时重置
+            return; // 直接返回，回到主菜单
+        }
         clearInputBuffer();
-        return;
-    }
-    clearInputBuffer();
 
-    printf("请输入密码: ");
-    if (scanf("%19s", pwd) != 1) {
-        printf("[错误] 输入格式错误！\n");
+        // 处理取消登录
+        if (isQuitInput(userId)) {
+            printf("                      已取消登录，返回主菜单...\n");
+            currentUser = NULL; // 明确标记取消状态
+            return; // 返回主菜单
+        }
+
+        // 读取密码
+        printf("                      请输入密码（输入q/Q取消）: ");
+        if (scanf("%19s", password) != 1) {
+            printf("                      [错误] 输入格式错误，返回主菜单！\n");
+            clearInputBuffer();
+            currentUser = NULL;
+            return;
+        }
         clearInputBuffer();
-        return;
-    }
-    clearInputBuffer();
 
-    //查找用户
-    User* user = findUser(id);
-    if (!user) {
-        printf("[错误] 用户ID不存在！\n");
-        currentUser = NULL;
-        return;
-    }
+        // 处理密码输入取消
+        if (isQuitInput(password)) {
+            printf("                      已取消登录，返回主菜单...\n");
+            currentUser = NULL;
+            return;
+        }
 
-    //校验密码
-    if (strcmp(user->userPwd, pwd) == 0) {
-        currentUser = user;
-        printf("[成功] 用户 %s 登录成功！\n", currentUser->userName);
-    } else {
-        printf("[错误] 密码错误！\n");
-        currentUser = NULL;
+        // 验证用户
+        User* user = findUser(userId);
+        if (user != NULL && strcmp(user->userPwd, password) == 0) {
+            currentUser = user; // 登录成功，赋值当前用户
+            printf("                      登录成功！欢迎您，%s！\n", user->userName);
+            return; // 成功后返回
+        } else {
+            printf("                      [错误] 用户名或密码错误！\n");
+            // 询问是否重试
+            printf("                      是否重新登录？(y/n): ");
+            char retry;
+            scanf("%c", &retry);
+            clearInputBuffer();
+            if (retry != 'y' && retry != 'Y') {
+                printf("                      已取消登录，返回主菜单...\n");
+                currentUser = NULL;
+                return; // 不重试，返回主菜单
+            }
+            // 重试则继续循环
+        }
     }
 }
-
 //填写需求调查
 void inputDemandByForm() {
     //检查登录状态
     if (currentUser == NULL || strlen(currentUser->userName) == 0) {
-        printf("[错误] 请先登录系统！\n");
+        printf("                [错误] 请先登录系统！\n");
         return;
     }
 
@@ -512,42 +531,42 @@ void inputDemandByForm() {
     userDemand.valid = 0;
 
     //输入流量需求（带校验）
-    printf("\n===== 需求调查 =====");
+    printf("\n========================== 需求调查 ==========================");
     while (1) {
-        printf("\n请输入每月流量需求(MB，0-10000)：");
+        printf("\n              请输入每月流量需求(MB，0-10000)：");
         if (scanf("%d", &userDemand.data_mb) != 1) {
-            printf("[错误] 输入格式错误，请重新输入数字！");
+            printf("            [错误] 输入格式错误，请重新输入数字！");
             clearInputBuffer();
             continue;
         }
         if (userDemand.data_mb >= 0 && userDemand.data_mb <= 10000) break;
-        printf("[错误] 流量范围需在0-10000MB之间！");
+        printf("               [错误] 流量范围需在0-10000MB之间！");
     }
     clearInputBuffer();
 
     //输入通话需求（带校验）
     while (1) {
-        printf("请输入每月通话时长需求(分钟，0-3000)：");
+        printf("           请输入每月通话时长需求(分钟，0-3000)：");
         if (scanf("%d", &userDemand.voice_minutes) != 1) {
-            printf("[错误] 输入格式错误，请重新输入数字！");
+            printf("            [错误] 输入格式错误，请重新输入数字！\n");
             clearInputBuffer();
             continue;
         }
         if (userDemand.voice_minutes >= 0 && userDemand.voice_minutes <= 3000) break;
-        printf("[错误] 通话时长需在0-3000分钟之间！");
+        printf("                [错误] 通话时长需在0-3000分钟之间！\n");
     }
     clearInputBuffer();
 
     //输入短信需求（带校验）
     while (1) {
-        printf("请输入每月短信需求(条，0-1000)：");
+        printf("               请输入每月短信需求(条，0-1000)：");
         if (scanf("%d", &userDemand.sms) != 1) {
-            printf("[错误] 输入格式错误，请重新输入数字！");
+            printf("            [错误] 输入格式错误，请重新输入数字！\n");
             clearInputBuffer();
             continue;
         }
         if (userDemand.sms >= 0 && userDemand.sms <= 1000) break;
-        printf("[错误] 短信数量需在0-1000条之间！");
+        printf("              [错误] 短信数量需在0-1000条之间！\n");
     }
     clearInputBuffer();
 
@@ -555,9 +574,9 @@ void inputDemandByForm() {
 
     //调用保存函数，将需求写入文本文件
     if (saveDemandToText(currentUser->userId)) {
-        printf("需求已成功保存！\n");
+        printf("                需求已成功保存！\n");
     } else {
-        printf("需求保存失败，请重试！\n");
+        printf("              需求保存失败，请重试！\n");
     }
 }
 
@@ -565,7 +584,7 @@ void inputDemandByForm() {
 void calcUserStar() {
     //检查登录状态
     if (currentUser == NULL || strlen(currentUser->userName) == 0) {
-        printf("[错误] 请先登录系统！\n");
+        printf("              [错误] 请先登录系统！\n");
         return;
     }
 
@@ -589,16 +608,16 @@ void calcUserStar() {
     currentUser->userStar = finalStar;
 
     // 输出结果
-    printf("\n[星级计算结果]\n");
-    printf("累计消费：%.2f元 → 基础星级：%d星\n", currentUser->totalCost, baseStar);
-    printf("使用年限：%d年 → 年限加成：%d星\n", currentUser->useYears, yearBonus);
-    printf("当前星级：%d星\n", finalStar);
+    printf("\n                   [星级计算结果]\n");
+    printf("                   累计消费：%.2f元 → 基础星级：%d星\n", currentUser->totalCost, baseStar);
+    printf("                   使用年限：%d年 → 年限加成：%d星\n", currentUser->useYears, yearBonus);
+    printf("                     当前星级：%d星\n", finalStar);
 }
 
 //优先判断用户是否有套餐
 void recommendPackages() {
     if (currentUser == NULL) {
-        printf("[错误] 请先登录！\n");
+        printf("                   [错误] 请先登录！\n");
         return;
     }
 
@@ -642,7 +661,7 @@ void matchPackagesByDemand() {
     
     // 检查需求是否有效
     if (!userDemand.valid) {
-        printf("[错误] 请先填写有效的需求调查！\n");
+        printf("                 [错误] 请先填写有效的需求调查！\n");
         return;
     }
     
@@ -661,18 +680,18 @@ void recommendForNewUser() {
 
     //前置检查：用户必须登录且未选择套餐
     if (currentUser == NULL) {
-        printf("[错误] 请先登录系统！\n");
+        printf("                 [错误] 请先登录系统！\n");
         return;
     }
     if (strcmp(currentUser->selectedPkg, "0")  != 0) {
-        printf("[提示] 该用户已选择套餐，使用常规相似套餐推荐！\n");
+        printf("          [提示] 该用户已选择套餐，使用常规相似套餐推荐！\n");
         itemBasedCFRecommendation();  //调用原有基于物品的推荐
         return;
     }
 
     //使用用户填写的需求匹配
     if (userDemand.valid) {  // 若用户填写了需求调查
-        printf("\n===== 基于用户需求的推荐（新用户）=====\n");
+        printf("\n ========================== 基于用户需求的推荐（新用户）==========================\n");
         matchPackagesByDemand();  
         if (matchedPkgCount > 0) {
             showMatchedPackages();
@@ -720,17 +739,17 @@ void itemBasedCFRecommendation() {
 
     // 前置检查
     if (currentUser == NULL) {
-        printf("[错误] 请先登录系统！\n");
+        printf("                 [错误] 请先登录系统！\n");
         return;
     }
     if (pkgCount == 0) {
-        printf("[错误] 暂无套餐数据！\n");
+        printf("                 [错误] 暂无套餐数据！\n");
         return;
     }
 
     // 检查用户是否已选择套餐（无已选套餐则无法推荐）
     if (strcmp(currentUser->selectedPkg, "0") == 0) {
-        printf("[提示] 请先选择套餐，再获取相似推荐！\n");
+        printf("                [提示] 请先选择套餐，再获取相似推荐！\n");
         return;
     }
 
@@ -744,7 +763,7 @@ void itemBasedCFRecommendation() {
         }
     }
     if (selectedPkgIndex == -1) {
-        printf("[错误] 已选套餐数据不存在！\n");
+        printf("                    [错误] 已选套餐数据不存在！\n");
         return;
     }
 
@@ -777,7 +796,7 @@ void itemBasedCFRecommendation() {
 
     // 检查是否有相似套餐
     if (similarCount == 0) {
-        printf("[提示] 未找到与已选套餐相似的套餐！\n");
+        printf("                [提示] 未找到与已选套餐相似的套餐！\n");
         return;
     }
 
@@ -803,13 +822,13 @@ void itemBasedCFRecommendation() {
 
     // 检查筛选后是否有推荐结果
     if (matchedPkgCount == 0) {
-        printf("[提示] 未找到符合相似度要求的推荐套餐！\n");
+        printf("         [提示] 未找到符合相似度要求的推荐套餐！\n");
         return;
     }
 
     // 输出推荐结果
-    printf("\n===== 基于套餐相似性的推荐结果 =====\n");
-    printf("（基准套餐：%s，相似度阈值：%.1f）\n", 
+    printf("\n========================== 基于套餐相似性的推荐结果 ==========================\n");
+    printf("                     （基准套餐：%s，相似度阈值：%.1f）\n", 
            packageList[selectedPkgIndex].name, similarityThreshold);
     showMatchedPackages(); 
 }
@@ -837,63 +856,63 @@ void showMatchedPackages() {
         int end = (currentPage * pageSize < matchedPkgCount) ? currentPage * pageSize : matchedPkgCount;
 
         // 打印当前页套餐
-        printf("\n===== 推荐套餐（%d星用户）- 第%d/%d页 =====\n", 
+        printf("\n========================== 推荐套餐（%d星用户）- 第%d/%d页 ==========================\n", 
                currentUser->userStar, currentPage, totalPages);
-        printf("+----+----------------+----------+----------+----------+----------+\n");
-        printf("| ID | 套餐名称       | 月费(元) | 流量(MB) | 通话(分钟)| 短信(条) |\n");
-        printf("+----+----------------+----------+----------+----------+----------+\n");
+        printf("+------+--------------------+--------------+--------------+------------+------------+\n");
+        printf("|  ID  |      套餐名称      |   月费(元)   |   流量(MB)   |  通话(分钟)|  短信(条)  |\n");
+        printf("+------+--------------------+--------------+--------------+------------+------------+\n");
         
         for (int i = start; i < end; i++) {
             const Package* pkg = &matchedPackages[i];
-            printf("|%2d  |%-14s  |%8.2f  |%8d  |%8d   |%6d    |\n",
+            printf("|  %2d  |    %-14s    |  %8.2f    |   %8d   |%8d    | %6d     |\n",
                    pkg->id, pkg->name, pkg->monthly_fee,
                    pkg->data_mb, pkg->voice_minutes, pkg->sms);
         }
         
-        printf("+----+----------------+----------+----------+----------+----------+\n");
+        printf("+------+--------------------+--------------+--------------+------------+------------+\n");
 
         // 分页控制
         if (totalPages <= 1) break;
-        printf("\n输入页码(1-%d)或q退出：", totalPages);
+        printf("\n                         输入页码(1-%d)或q退出：", totalPages);
         fgets(input, sizeof(input), stdin);
         if (input[0] == 'q' || input[0] == 'Q') break;
         
         int page = atoi(input);
         if (page >= 1 && page <= totalPages) currentPage = page;
-        else printf("无效页码，请重新输入！\n");
+        else printf("                      无效页码，请重新输入！\n");
     }
 }
 
 // 查询个人套餐
 void queryUserPackage() {
-    printf("\n===== 个人套餐信息 =====\n");
-    printf("用户编号：%s\n", currentUser->userId);
-    printf("用户名：%s\n", currentUser->userName);
-    printf("已选套餐编号：%s\n", currentUser->selectedPkg);
+    printf("\n========================== 个人套餐信息 ==========================\n");
+    printf("                          用户编号：%s\n", currentUser->userId);
+    printf("                          用户名：%s\n", currentUser->userName);
+    printf("                          已选套餐编号：%s\n", currentUser->selectedPkg);
 
     // 查找套餐详情
     int found = 0;
     for (int i = 0; i < pkgCount; i++) {
         if (packageList[i].id == atoi(currentUser->selectedPkg)) { // 假设套餐编号为数字ID
-            printf("套餐详情：\n");
-            printf("  套餐名称：%s\n", packageList[i].name);
-            printf("  月资费：%.2f元\n", packageList[i].monthly_fee);
-            printf("  包含流量：%d MB\n", packageList[i].data_mb);
-            printf("  包含语音：%d 分钟\n", packageList[i].voice_minutes);
+            printf("                          套餐详情：\n");
+            printf("                      套餐名称：%s\n", packageList[i].name);
+            printf("                      月资费：%.2f元\n", packageList[i].monthly_fee);
+            printf("                      包含流量：%d MB\n", packageList[i].data_mb);
+            printf("                      包含语音：%d 分钟\n", packageList[i].voice_minutes);
             found = 1;
             break;
         }
     }
 
     if (!found) {
-        printf("提示：当前套餐信息未找到（可能已下架）\n");
+        printf("                 提示：当前套餐信息未找到（可能已下架）\n");
     }
 }
 
 // 申请变更套餐
 void applyPackageChange() {
-    printf("\n===== 套餐变更申请 =====\n");
-    printf("请输入新套餐编号：");
+    printf("\n========================== 套餐变更申请 ==========================\n");
+    printf("                       请输入新套餐编号：");
     char pkgId[20];
     scanf("%s", pkgId);
     clearInputBuffer();
@@ -902,11 +921,12 @@ void applyPackageChange() {
     // 更新用户列表并保存
     User* user = findUser(currentUser->userId);
     if (user) {
+        
         strncpy(user->selectedPkg, pkgId, 19);
     } 
     if (saveUsersToText()) {
-        printf("套餐变更成功！\n");
+        printf("                    套餐变更成功！\n");
     } else {
-        printf("套餐变更失败！\n");
+        printf("                    套餐变更失败！\n");
     }
 }
